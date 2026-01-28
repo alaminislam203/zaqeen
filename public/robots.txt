@@ -9,4 +9,4 @@ Disallow: /checkout/
 Disallow: /login/
 Disallow: /my-orders/
 
-Sitemap: [https://your-domain.com/sitemap.xml]
+Sitemap: [https://zaqeen.vercel.app/sitemap.xml]
