@@ -8,20 +8,21 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
-import { HiOutlineShoppingCart, HiOutlineHeart, HiOutlineChevronRight, HiOutlineHome, HiStar, HiOutlineFire, HiOutlineLockClosed } from 'react-icons/hi';
+import { HiOutlineShoppingBag, HiOutlineHeart, HiHeart, HiOutlineArrowNarrowRight, HiOutlineHome, HiStar, HiOutlineFire, HiOutlineShieldCheck } from 'react-icons/hi';
+import { RiTranslate2, RiFocus3Line } from 'react-icons/ri';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 
+// --- Premium Skeleton Loader ---
 const ProductPageSkeleton = () => (
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-pulse">
-    <div className="grid md:grid-cols-2 gap-12">
-      <div className="bg-gray-200 h-[500px] rounded-lg"></div>
-      <div>
-        <div className="h-4 bg-gray-300 rounded w-1/4 mb-4"></div>
-        <div className="h-8 bg-gray-400 rounded w-3/4 mb-4"></div>
-        <div className="h-6 bg-gray-300 rounded w-1/2 mb-6"></div>
-        <div className="h-20 bg-gray-300 rounded mb-6"></div>
-        <div className="h-12 bg-gray-400 rounded w-full"></div>
+  <div className="max-w-7xl mx-auto px-6 py-20 animate-pulse">
+    <div className="grid md:grid-cols-2 gap-20">
+      <div className="bg-gray-50 aspect-[3/4] rounded-sm"></div>
+      <div className="space-y-8">
+        <div className="h-4 bg-gray-100 rounded w-1/4"></div>
+        <div className="h-12 bg-gray-100 rounded w-3/4"></div>
+        <div className="h-20 bg-gray-100 rounded w-full"></div>
+        <div className="h-16 bg-gray-100 rounded w-full"></div>
       </div>
     </div>
   </div>
@@ -41,32 +42,27 @@ export default function ProductPage() {
   const { state: wishlistState, dispatch: wishlistDispatch } = useWishlist();
   const isInWishlist = product ? wishlistState.wishlistItems.some(item => item.id === product.id) : false;
 
+  // সম্পর্কিত পণ্য খোঁজা (Category based)
   const fetchRelatedProducts = useCallback(async (category, currentProductId) => {
     if (!category) return;
-    const q = query(
-      collection(db, 'products'),
-      limit(5)
-    );
+    const q = query(collection(db, 'products'), where('category', '==', category), limit(5));
     const querySnapshot = await getDocs(q);
     const products = [];
     querySnapshot.forEach((doc) => {
-      if (doc.id !== currentProductId) { 
-        products.push({ id: doc.id, ...doc.data() });
-      }
+      if (doc.id !== currentProductId) products.push({ id: doc.id, ...doc.data() });
     });
     setRelatedProducts(products.slice(0, 4)); 
   }, []);
 
+  // রিয়েল-টাইম সেলস কাউন্ট ট্র্যাকিং
   const fetchSalesCount = useCallback(async (productId) => {
-    const ordersQuery = query(collection(db, 'orders'), where('items', 'array-contains', productId));
+    const ordersQuery = query(collection(db, 'orders'), where('status', 'in', ['Processing', 'Shipped', 'Delivered']));
     const querySnapshot = await getDocs(ordersQuery);
     let count = 0;
     querySnapshot.forEach(doc => {
         const order = doc.data();
-        order.items.forEach(item => {
-            if(item.id === productId) {
-                count += item.quantity;
-            }
+        order.items?.forEach(item => {
+            if(item.id === productId) count += item.quantity;
         });
     });
     setSalesCount(count);
@@ -93,143 +89,139 @@ export default function ProductPage() {
       if (fetchedReviews.length > 0) {
         const totalRating = fetchedReviews.reduce((acc, curr) => acc + curr.rating, 0);
         setAvgRating(totalRating / fetchedReviews.length);
-      } else {
-        setAvgRating(0);
       }
-    } else {
-      console.log('No such document!');
     }
     setLoading(false);
   }, [id, fetchRelatedProducts, fetchSalesCount]);
 
-  useEffect(() => {
-    fetchProductAndReviews();
-  }, [fetchProductAndReviews]);
+  useEffect(() => { fetchProductAndReviews(); }, [fetchProductAndReviews]);
 
   const handleAddToCart = () => {
-    const isSizeRequired = product.stock && typeof product.stock === 'object' && Object.keys(product.stock).length > 0;
-    if (isSizeRequired && !selectedSize) {
-      toast.error('Please select a size!');
+    const sizes = product.stock && typeof product.stock === 'object' ? Object.keys(product.stock) : [];
+    if (sizes.length > 0 && !selectedSize) {
+      toast.error('Identity Audit: Please select a size.');
       return;
-    }
-
-    const stockAvailable = isSizeRequired ? product.stock[selectedSize] > 0 : product.stock > 0;
-    if (!stockAvailable) {
-        toast.error('This size is out of stock.');
-        return;
     }
 
     cartDispatch({ 
         type: 'ADD_TO_CART', 
         payload: { ...product, selectedSize, price: product.discountPrice || product.price }
     });
-    toast.success('Added to your bag!', { icon: '🛍️' });
+    toast.success('Article added to bag', { 
+        style: { borderRadius: '0px', background: '#000', color: '#fff', fontSize: '10px', letterSpacing: '0.2em' }
+    });
   };
 
   const handleWishlistToggle = () => {
     if (isInWishlist) {
       wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product });
-      toast.success('Removed from your wishlist');
+      toast.success('Removed from Portfolio');
     } else {
       wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: product });
-      toast.success('Added to your wishlist! ❤️');
+      toast.success('Archived to Portfolio', { icon: '🖤' });
     }
   };
   
-  if (loading || !product) {
-    return <ProductPageSkeleton />;
-  }
+  if (loading || !product) return <ProductPageSkeleton />;
 
   const discountPercentage = product.discountPrice ? Math.round(((product.price - product.discountPrice) / product.price) * 100) : 0;
-  const isSizeRequired = product.stock && typeof product.stock === 'object' && Object.keys(product.stock).length > 0;
+  const availableSizes = product.stock && typeof product.stock === 'object' ? Object.keys(product.stock) : [];
 
   return (
-    <div className="bg-white text-gray-800">
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <nav className="flex items-center text-sm text-gray-500 mb-8 font-medium">
-            <Link href="/" className="hover:text-gray-800 flex items-center gap-1">
-              <HiOutlineHome />
-              Home
-            </Link>
-            <HiOutlineChevronRight className="mx-2" />
-            <Link href="/shop" className="hover:text-gray-800">
-              Shop
-            </Link>
+    <div className="bg-[#FDFDFD] text-black selection:bg-black selection:text-white">
+        <div className="max-w-7xl mx-auto px-6 py-12 md:py-24">
+          
+          {/* Minimal Breadcrumb */}
+          <nav className="flex items-center text-[10px] uppercase tracking-[0.4em] text-gray-400 mb-16 font-black italic">
+            <Link href="/" className="hover:text-black transition-colors">Origin</Link>
+            <span className="mx-4">/</span>
+            <Link href="/shop" className="hover:text-black transition-colors">Archive</Link>
             {product.category && (
               <>
-                <HiOutlineChevronRight className="mx-2" />
-                <span className="capitalize text-gray-800 font-bold">{product.category}</span>
+                <span className="mx-4">/</span>
+                <span className="text-black">{product.category}</span>
               </>
             )}
           </nav>
 
-          <div className="grid md:grid-cols-2 gap-12 items-start">
-            <div className="aspect-[4/5] relative rounded-lg overflow-hidden shadow-lg shadow-gray-200/50">
-              <Image 
-                src={product.imageUrl || '/placeholder.svg'}
-                alt={product.name}
-                layout="fill"
-                objectFit="cover"
-              />
-               {discountPercentage > 0 && (
-                <div className="absolute top-5 left-5 bg-black text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest">
-                  -{discountPercentage}%
+          <div className="grid md:grid-cols-2 gap-20 lg:gap-32 items-start">
+            
+            {/* Gallery Section */}
+            <div className="space-y-6">
+                <div className="aspect-[3/4] relative bg-white border border-gray-50 overflow-hidden group">
+                <Image 
+                    src={product.imageUrl || '/placeholder.svg'}
+                    alt={product.name}
+                    fill
+                    className="object-cover transition-transform duration-[2s] group-hover:scale-110 grayscale-[0.2] group-hover:grayscale-0"
+                />
+                {discountPercentage > 0 && (
+                    <div className="absolute top-8 left-8 bg-black text-white text-[9px] font-black px-4 py-2 uppercase tracking-widest italic">
+                    -{discountPercentage}% Acquisition
+                    </div>
+                )}
                 </div>
-              )}
+                {/* Secondary Images if any could go here */}
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">{product.category || 'ZAQEEN'}</p>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tighter mt-1">{product.name}</h1>
+            {/* Product Narrative */}
+            <div className="space-y-12">
+              <div className="space-y-4">
+                <span className="text-[10px] text-gray-400 uppercase font-black tracking-[0.5em] italic block">Article No. {product.id.slice(-6).toUpperCase()}</span>
+                <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none italic">{product.name}</h1>
                 
-                <div className="flex items-center gap-4 mt-3 text-sm">
+                <div className="flex items-center gap-8 pt-4">
                     {reviews.length > 0 && (
-                        <div className="flex items-center gap-1.5 text-gray-500">
-                            <HiStar className="w-5 h-5 text-amber-400"/>
-                            <span className="font-bold text-gray-800">{avgRating.toFixed(1)}</span>
-                            <span className="text-gray-400">({reviews.length} Reviews)</span>
+                        <div className="flex items-center gap-2">
+                            <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => <HiStar key={i} className={`w-3.5 h-3.5 ${i < Math.round(avgRating) ? 'text-black' : 'text-gray-100'}`} />)}
+                            </div>
+                            <span className="text-[10px] font-black tracking-widest text-gray-400">({reviews.length})</span>
                         </div>
                     )}
-                    {reviews.length > 0 && salesCount > 0 && <div className="w-px h-4 bg-gray-200"></div>}
                     {salesCount > 0 && (
-                        <div className="flex items-center gap-1.5">
-                            <HiOutlineFire className="w-5 h-5 text-rose-500"/>
-                            <span className="font-bold text-gray-800">{salesCount}</span>
-                            <span className="text-gray-500">Sold</span>
+                        <div className="flex items-center gap-3 bg-emerald-50 px-4 py-1.5 rounded-full">
+                            <HiOutlineFire className="w-4 h-4 text-emerald-600 animate-pulse"/>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">{salesCount} Articles Secured</span>
                         </div>
                     )}
                 </div>
               </div>
 
-              <div className="flex items-baseline gap-3 pt-2">
+              <div className="flex items-baseline gap-6 border-b border-gray-50 pb-10">
                   {product.discountPrice ? (
                       <>
-                          <span className="text-3xl font-bold text-black">৳{product.discountPrice}</span>
-                          <span className="text-xl text-gray-300 line-through">৳{product.price}</span>
+                          <span className="text-4xl font-black tracking-tighter italic">৳{product.discountPrice.toLocaleString()}</span>
+                          <span className="text-xl text-gray-200 line-through tracking-tighter">৳{product.price.toLocaleString()}</span>
                       </>
                   ) : (
-                      <span className="text-3xl font-bold text-black">৳{product.price}</span>
+                      <span className="text-4xl font-black tracking-tighter italic">৳{product.price.toLocaleString()}</span>
                   )}
               </div>
               
-              <p className="text-sm leading-relaxed text-gray-500">{product.description}</p>
+              <div className="space-y-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">The Blueprint</span>
+                  <p className="text-[13px] leading-relaxed text-gray-500 font-medium italic max-w-md">{product.description}</p>
+              </div>
 
-              {isSizeRequired && (
-                <div className="space-y-3">
-                  <p className="text-sm font-bold">Select Size:</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {Object.keys(product.stock).map(size => {
+              {/* Size Selection Studio */}
+              {availableSizes.length > 0 && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center max-w-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em]">Select Architecture</p>
+                    <button className="text-[8px] font-black uppercase tracking-widest text-gray-400 underline decoration-gray-200 underline-offset-4">Size Guide</button>
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    {availableSizes.map(size => {
                       const isAvailable = product.stock[size] > 0;
                       return (
                           <button 
                               key={size}
                               onClick={() => isAvailable && setSelectedSize(size)}
                               disabled={!isAvailable}
-                              className={`px-4 py-2 border rounded-md text-sm font-semibold transition-all duration-200 
-                                  ${!isAvailable ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through' : ''}
-                                  ${selectedSize === size ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300 hover:border-black'}`
+                              className={`w-14 h-14 border text-[11px] font-black uppercase transition-all duration-500 rounded-sm 
+                                  ${!isAvailable ? 'bg-gray-50 text-gray-200 border-gray-50 cursor-not-allowed italic' : ''}
+                                  ${selectedSize === size ? 'bg-black text-white border-black shadow-2xl scale-110' : 'bg-white text-black border-gray-100 hover:border-black'}`
                               }
                           >
                               {size}
@@ -240,40 +232,52 @@ export default function ProductPage() {
                 </div>
               )}
 
-              <div className="pt-4 space-y-4">
-                <div className="flex items-stretch gap-3">
+              {/* Action Portal */}
+              <div className="pt-8 space-y-8">
+                <div className="flex items-stretch gap-4 max-w-md">
                     <button 
-                    onClick={handleAddToCart}
-                    className="flex-grow flex items-center justify-center gap-3 px-8 py-4 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-md hover:bg-gray-800 transition-colors shadow-lg shadow-black/20"
+                        onClick={handleAddToCart}
+                        className="group relative flex-grow bg-black text-white py-6 overflow-hidden transition-all active:scale-95"
                     >
-                    <HiOutlineShoppingCart className="h-5 w-5" />
-                    Add to Bag
+                        <span className="relative z-10 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-[0.5em]">
+                            <HiOutlineShoppingBag size={20} /> Secure Acquisition
+                        </span>
+                        <div className="absolute inset-0 bg-neutral-900 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                     </button>
                     <button 
-                    onClick={handleWishlistToggle}
-                    className={`px-4 py-4 border rounded-md transition-colors ${isInWishlist ? 'bg-rose-50 border-rose-500 text-rose-500' : 'border-gray-300 hover:border-black'}`}>
-                    <HiOutlineHeart className="h-6 w-6 stroke-2" />
+                        onClick={handleWishlistToggle}
+                        className={`px-6 border transition-all duration-500 ${isInWishlist ? 'bg-black border-black text-white' : 'border-gray-100 hover:border-black'}`}
+                    >
+                        {isInWishlist ? <HiHeart size={24} /> : <HiOutlineHeart size={24} />}
                     </button>
                 </div>
-                <div className="text-center text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-200/70">
-                
-                    <div className="flex items-center justify-center gap-2 font-semibold text-gray-600">
-                       <HiOutlineLockClosed />
-                       <span>Security Notice</span>
+
+                {/* Security Footnote */}
+                <div className="max-w-md p-8 bg-gray-50/50 border border-gray-50 space-y-4">
+                    <div className="flex items-center gap-4">
+                       <HiOutlineShieldCheck className="text-emerald-500 w-5 h-5" />
+                       <span className="text-[9px] font-black uppercase tracking-[0.3em]">Acquisition Security Protocol</span>
                     </div>
-                    <p className="mt-2 leading-relaxed">All order information is saved. Legal action will be taken if any fake orders are detected.</p>
+                    <p className="text-[9px] text-gray-400 font-bold tracking-widest leading-loose uppercase">
+                        Every transaction is logged. fraudulent activity will trigger immediate legal audit. 2-4 business days for logistics.
+                    </p>
                 </div>
               </div>
-
             </div>
           </div>
 
-          <ProductReviews productId={id} initialReviews={reviews} onReviewPosted={fetchProductAndReviews} />
+          {/* Engagement Sections */}
+          <div className="mt-32">
+             <ProductReviews productId={id} initialReviews={reviews} onReviewPosted={fetchProductAndReviews} />
+          </div>
 
           {relatedProducts.length > 0 && (
-            <div className="mt-24 pt-16 border-t border-gray-100">
-                <h2 className="text-2xl font-black tracking-tighter text-center mb-10">You Might Also Like</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+            <div className="mt-40 pt-20 border-t border-gray-50">
+                <div className="flex flex-col items-center mb-20 space-y-4">
+                    <span className="text-[10px] uppercase tracking-[0.5em] text-gray-300 font-black italic">Similar Blueprints</span>
+                    <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic">Complementary Goods</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {relatedProducts.map(p => <ProductCard key={p.id} product={p} />)}
                 </div>
             </div>
