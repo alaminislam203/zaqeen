@@ -1,7 +1,7 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-const URL = 'https://zaqeen-aa745.web.app';
+const URL = 'https://zaqeen.vercel.app';
 
 export default async function sitemap() {
     // Static pages
