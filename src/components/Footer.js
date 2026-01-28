@@ -24,7 +24,7 @@ const Footer = () => {
             <ul className="space-y-4 text-[11px] text-gray-500 uppercase tracking-widest font-medium">
               <li className="hover:text-black"><Link href="/shipping-info">Shipping Info</Link></li>
               <li className="hover:text-black"><Link href="/return-policy">Return Policy</Link></li>
-              <li className="hover:text-black"><Link href="/orders">Track Order</Link></li>
+              <li className="hover:text-black"><Link href="/track-order">Track Order</Link></li>
               <li className="hover:text-black"><Link href="/how-to-buy">How to Buy</Link></li>
             </ul>
           </div>
