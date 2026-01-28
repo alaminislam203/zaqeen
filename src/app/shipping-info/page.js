@@ -1,5 +1,5 @@
 'use client';
-import Navbar from "@/components/Navbar";
+
 import { HiOutlineTruck, HiOutlineGlobe, HiOutlineClock, HiOutlineShieldCheck } from 'react-icons/hi';
 import { RiMapPinLine, RiBox3Line } from 'react-icons/ri';
 
@@ -21,7 +21,7 @@ export default function ShippingInfo() {
 
   return (
     <main className="min-h-screen bg-white selection:bg-black selection:text-white">
-      <Navbar />
+
       
       <div className="max-w-5xl mx-auto px-6 py-16 md:py-32">
         {/* Header Section */}
