@@ -55,7 +55,7 @@ export default function ContactPage() {
 
     return (
         <div className="bg-white min-h-screen">
-            <Navbar />
+            
             <div className="max-w-7xl mx-auto px-6 py-20">
                 <header className="text-center mb-16">
                     <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic">Get In Touch</h1>
