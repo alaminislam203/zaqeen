@@ -28,7 +28,7 @@ export default function CheckoutPage() {
   // Auth Protection: লগইন না থাকলে লগইন পেজে পাঠিয়ে দেওয়া
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((currentUser) => {
-      if (!currentUser) router.push('/account/login?redirect=/checkout');
+      if (!currentUser) router.push('/login?redirect=/checkout');
       else setUser(currentUser);
       setAuthLoading(false);
     });
