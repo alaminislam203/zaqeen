@@ -1,5 +1,5 @@
 'use client';
-import Navbar from "@/components/Navbar";
+
 import { HiOutlineRefresh, HiOutlineShieldCheck, HiOutlineTruck, HiOutlineChatAlt } from 'react-icons/hi';
 
 export default function ReturnPolicy() {
@@ -28,7 +28,7 @@ export default function ReturnPolicy() {
 
   return (
     <main className="min-h-screen bg-white selection:bg-black selection:text-white">
-      <Navbar />
+     
       
       <div className="max-w-5xl mx-auto px-6 py-16 md:py-32">
         {/* Header Section */}
