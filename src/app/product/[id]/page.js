@@ -241,9 +241,15 @@ export default function ProductPage() {
               </div>
               
               <div className="space-y-4">
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">The Blueprint</span>
-                  <p className="text-[13px] leading-relaxed text-gray-500 font-medium italic max-w-md">{product.description}</p>
-              </div>
+    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">
+        The Blueprint
+    </span>
+    {/* dangerouslySetInnerHTML ব্যবহার করে HTML সাপোর্ট যোগ করা হয়েছে */}
+    <div 
+        className="text-[13px] leading-relaxed text-gray-500 font-medium italic max-w-md prose prose-sm prose-stone"
+        dangerouslySetInnerHTML={{ __html: product.description }} 
+    />
+</div>
 
               {availableSizes.length > 0 && (
                 <div className="space-y-6">
