@@ -264,7 +264,6 @@ export default function ProductPage() {
   Size Guide
 </button>
 
-// ৩. রিটার্ন স্টেটমেন্টের একদম শেষে (নিচে) এই মোডালটি যোগ করুন
 {showSizeGuide && (
   <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6" onClick={() => setShowSizeGuide(false)}>
     <div className="bg-white max-w-lg w-full p-10 relative" onClick={e => e.stopPropagation()}>
