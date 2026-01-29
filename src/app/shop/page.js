@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import Navbar from '@/components/Navbar';
+
 import ProductCard from '@/components/ProductCard';
 import { HiAdjustments, HiOutlineChevronDown, HiOutlineViewGrid, HiOutlineViewList } from 'react-icons/hi';
 
@@ -157,7 +157,7 @@ function ShopContent() {
 export default function ShopPage() {
   return (
     <>
-      <Navbar />
+      
       <Suspense fallback={
         <div className="h-screen flex items-center justify-center">
            <div className="w-10 h-10 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
