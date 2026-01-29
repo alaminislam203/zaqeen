@@ -21,19 +21,19 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'media-cdn.storex.dev', // এই হোস্টনেমটি যোগ করা হয়েছে
+        hostname: 'media-cdn.storex.dev',
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'shopbasebd.com', // এই হোস্টনেমটি যোগ করা হয়েছে
+        hostname: 'shopbasebd.com',
         port: '',
         pathname: '/**',
-      },,
+      }, // <--- Fixed: Removed the double comma here
       {
         protocol: 'https',
-        hostname: 'i.imgur.com', // এই হোস্টনেমটি যোগ করা হয়েছে
+        hostname: 'i.imgur.com',
         port: '',
         pathname: '/**',
       }
