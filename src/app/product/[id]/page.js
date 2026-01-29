@@ -34,6 +34,7 @@ export default function ProductPage() {
   const [reviews, setReviews] = useState([]);
   const [avgRating, setAvgRating] = useState(0);
   const [salesCount, setSalesCount] = useState(0);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   
   // মেইন ভিউ কন্ট্রোল করার জন্য নতুন স্টেট
   const [activeMedia, setActiveMedia] = useState({ type: 'image', url: '' });
@@ -256,7 +257,69 @@ export default function ProductPage() {
                 <div className="space-y-6">
                   <div className="flex justify-between items-center max-w-sm">
                     <p className="text-[10px] font-black uppercase tracking-[0.3em]">Select Architecture</p>
-                    <button className="text-[8px] font-black uppercase tracking-widest text-gray-400 underline decoration-gray-200 underline-offset-4">Size Guide</button>
+                    <button 
+  onClick={() => setShowSizeGuide(true)}
+  className="text-[8px] font-black uppercase tracking-widest text-gray-400 underline decoration-gray-200 underline-offset-4 hover:text-black transition-colors"
+>
+  Size Guide
+</button>
+
+// ৩. রিটার্ন স্টেটমেন্টের একদম শেষে (নিচে) এই মোডালটি যোগ করুন
+{showSizeGuide && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6" onClick={() => setShowSizeGuide(false)}>
+    <div className="bg-white max-w-lg w-full p-10 relative" onClick={e => e.stopPropagation()}>
+      <button 
+        onClick={() => setShowSizeGuide(false)}
+        className="absolute top-6 right-6 text-[10px] font-black uppercase tracking-widest"
+      >
+        Close [X]
+      </button>
+      
+      <div className="space-y-8">
+        <div className="text-center">
+            <span className="text-[10px] uppercase tracking-[0.5em] text-gray-400 font-black italic">Architecture</span>
+            <h2 className="text-3xl font-black uppercase tracking-tighter italic mt-2">Measurement Guide</h2>
+        </div>
+
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-black">
+              <th className="py-4 text-[10px] font-black uppercase tracking-widest">Size</th>
+              <th className="py-4 text-[10px] font-black uppercase tracking-widest">Chest (Inch)</th>
+              <th className="py-4 text-[10px] font-black uppercase tracking-widest">Length (Inch)</th>
+            </tr>
+          </thead>
+          <tbody className="text-[11px] font-bold uppercase tracking-widest">
+            <tr className="border-b border-gray-100">
+              <td className="py-4">Medium (M)</td>
+              <td className="py-4 text-gray-500">38"</td>
+              <td className="py-4 text-gray-500">27"</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-4">Large (L)</td>
+              <td className="py-4 text-gray-500">40"</td>
+              <td className="py-4 text-gray-500">28"</td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-4">Extra Large (XL)</td>
+              <td className="py-4 text-gray-500">42"</td>
+              <td className="py-4 text-gray-500">29"</td>
+            </tr>
+            <tr>
+              <td className="py-4 font-black">Double XL (XXL)</td>
+              <td className="py-4 text-gray-500">44"</td>
+              <td className="py-4 text-gray-500">30"</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p className="text-[9px] text-gray-400 font-medium italic leading-relaxed uppercase tracking-widest">
+          * Measurement may vary by +/- 0.5 inches due to manual cutting. For a relaxed fit, we recommend ordering one size up.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
                   </div>
                   <div className="flex gap-3 flex-wrap">
                     {availableSizes.map(size => {
