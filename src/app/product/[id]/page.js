@@ -8,21 +8,18 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
-import { HiOutlineShoppingBag, HiOutlineHeart, HiHeart, HiOutlineArrowNarrowRight, HiOutlineHome, HiStar, HiOutlineFire, HiOutlineShieldCheck } from 'react-icons/hi';
-import { RiTranslate2, RiFocus3Line } from 'react-icons/ri';
+import { HiOutlineShoppingBag, HiOutlineHeart, HiHeart, HiStar, HiOutlineFire, HiOutlineShieldCheck, HiPlay } from 'react-icons/hi';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 
-// --- Premium Skeleton Loader ---
 const ProductPageSkeleton = () => (
   <div className="max-w-7xl mx-auto px-6 py-20 animate-pulse">
     <div className="grid md:grid-cols-2 gap-20">
-      <div className="bg-gray-50 aspect-[3/4] rounded-sm"></div>
+      <div className="bg-gray-100 aspect-[3/4] rounded-sm"></div>
       <div className="space-y-8">
         <div className="h-4 bg-gray-100 rounded w-1/4"></div>
         <div className="h-12 bg-gray-100 rounded w-3/4"></div>
         <div className="h-20 bg-gray-100 rounded w-full"></div>
-        <div className="h-16 bg-gray-100 rounded w-full"></div>
       </div>
     </div>
   </div>
@@ -37,12 +34,14 @@ export default function ProductPage() {
   const [reviews, setReviews] = useState([]);
   const [avgRating, setAvgRating] = useState(0);
   const [salesCount, setSalesCount] = useState(0);
+  
+  // মেইন ভিউ কন্ট্রোল করার জন্য নতুন স্টেট
+  const [activeMedia, setActiveMedia] = useState({ type: 'image', url: '' });
 
   const { dispatch: cartDispatch } = useCart();
   const { state: wishlistState, dispatch: wishlistDispatch } = useWishlist();
   const isInWishlist = product ? wishlistState.wishlistItems.some(item => item.id === product.id) : false;
 
-  // সম্পর্কিত পণ্য খোঁজা (Category based)
   const fetchRelatedProducts = useCallback(async (category, currentProductId) => {
     if (!category) return;
     const q = query(collection(db, 'products'), where('category', '==', category), limit(5));
@@ -54,7 +53,6 @@ export default function ProductPage() {
     setRelatedProducts(products.slice(0, 4)); 
   }, []);
 
-  // রিয়েল-টাইম সেলস কাউন্ট ট্র্যাকিং
   const fetchSalesCount = useCallback(async (productId) => {
     const ordersQuery = query(collection(db, 'orders'), where('status', 'in', ['Processing', 'Shipped', 'Delivered']));
     const querySnapshot = await getDocs(ordersQuery);
@@ -78,6 +76,14 @@ export default function ProductPage() {
     if (docSnap.exists()) {
       const productData = { id: docSnap.id, ...docSnap.data() };
       setProduct(productData);
+      
+      // শুরুতে ভিডিও থাকলে ভিডিও দেখাবে, না থাকলে মেইন ইমেজ
+      if (productData.videoUrl) {
+        setActiveMedia({ type: 'video', url: productData.videoUrl });
+      } else {
+        setActiveMedia({ type: 'image', url: productData.imageUrl || productData.images?.[0] });
+      }
+
       fetchRelatedProducts(productData.category, id);
       fetchSalesCount(id);
       
@@ -131,7 +137,6 @@ export default function ProductPage() {
     <div className="bg-[#FDFDFD] text-black selection:bg-black selection:text-white">
         <div className="max-w-7xl mx-auto px-6 py-12 md:py-24">
           
-          {/* Minimal Breadcrumb */}
           <nav className="flex items-center text-[10px] uppercase tracking-[0.4em] text-gray-400 mb-16 font-black italic">
             <Link href="/" className="hover:text-black transition-colors">Origin</Link>
             <span className="mx-4">/</span>
@@ -146,22 +151,58 @@ export default function ProductPage() {
 
           <div className="grid md:grid-cols-2 gap-20 lg:gap-32 items-start">
             
-            {/* Gallery Section */}
+            {/* --- Updated Gallery Section --- */}
             <div className="space-y-6">
                 <div className="aspect-[3/4] relative bg-white border border-gray-50 overflow-hidden group">
-                <Image 
-                    src={product.imageUrl || '/placeholder.svg'}
-                    alt={product.name}
-                    fill
-                    className="object-cover transition-transform duration-[2s] group-hover:scale-110 grayscale-[0.2] group-hover:grayscale-0"
-                />
-                {discountPercentage > 0 && (
-                    <div className="absolute top-8 left-8 bg-black text-white text-[9px] font-black px-4 py-2 uppercase tracking-widest italic">
-                    -{discountPercentage}% Acquisition
-                    </div>
-                )}
+                    {activeMedia.type === 'video' ? (
+                        <video 
+                            src={activeMedia.url} 
+                            autoPlay 
+                            muted 
+                            loop 
+                            playsInline
+                            className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-[1.5s]"
+                        />
+                    ) : (
+                        <Image 
+                            src={activeMedia.url || '/placeholder.svg'}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-[2s] group-hover:scale-110 grayscale-[0.1] group-hover:grayscale-0"
+                        />
+                    )}
+
+                    {discountPercentage > 0 && (
+                        <div className="absolute top-8 left-8 bg-black text-white text-[9px] font-black px-4 py-2 uppercase tracking-widest italic z-10">
+                        -{discountPercentage}% Acquisition
+                        </div>
+                    )}
                 </div>
-                {/* Secondary Images if any could go here */}
+
+                {/* Thumbnails (Images + Video) */}
+                <div className="grid grid-cols-5 gap-3">
+                    {/* ভিডিও থাম্বনেইল (যদি থাকে) */}
+                    {product.videoUrl && (
+                        <button 
+                            onClick={() => setActiveMedia({ type: 'video', url: product.videoUrl })}
+                            className={`aspect-square relative border flex items-center justify-center bg-gray-50 transition-all ${activeMedia.type === 'video' ? 'border-black scale-95' : 'border-gray-100'}`}
+                        >
+                            <HiPlay className="w-6 h-6 text-black" />
+                            <span className="absolute bottom-1 text-[7px] font-black uppercase tracking-tighter">Motion</span>
+                        </button>
+                    )}
+
+                    {/* ইমেজেস থাম্বনেইল */}
+                    {product.images?.map((img, index) => (
+                        <button 
+                            key={index}
+                            onClick={() => setActiveMedia({ type: 'image', url: img })}
+                            className={`aspect-square relative border overflow-hidden transition-all ${activeMedia.url === img ? 'border-black scale-95 shadow-lg' : 'border-gray-100 hover:border-gray-300'}`}
+                        >
+                            <Image src={img} alt={`view-${index}`} fill className="object-cover" />
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Product Narrative */}
@@ -204,7 +245,6 @@ export default function ProductPage() {
                   <p className="text-[13px] leading-relaxed text-gray-500 font-medium italic max-w-md">{product.description}</p>
               </div>
 
-              {/* Size Selection Studio */}
               {availableSizes.length > 0 && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center max-w-sm">
@@ -232,7 +272,6 @@ export default function ProductPage() {
                 </div>
               )}
 
-              {/* Action Portal */}
               <div className="pt-8 space-y-8">
                 <div className="flex items-stretch gap-4 max-w-md">
                     <button 
@@ -252,7 +291,6 @@ export default function ProductPage() {
                     </button>
                 </div>
 
-                {/* Security Footnote */}
                 <div className="max-w-md p-8 bg-gray-50/50 border border-gray-50 space-y-4">
                     <div className="flex items-center gap-4">
                        <HiOutlineShieldCheck className="text-emerald-500 w-5 h-5" />
@@ -266,7 +304,6 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Engagement Sections */}
           <div className="mt-32">
              <ProductReviews productId={id} initialReviews={reviews} onReviewPosted={fetchProductAndReviews} />
           </div>
