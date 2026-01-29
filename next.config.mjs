@@ -24,6 +24,18 @@ const nextConfig = {
         hostname: 'media-cdn.storex.dev', // এই হোস্টনেমটি যোগ করা হয়েছে
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'shopbasebd.com', // এই হোস্টনেমটি যোগ করা হয়েছে
+        port: '',
+        pathname: '/**',
+      },,
+      {
+        protocol: 'https',
+        hostname: 'i.imgur.com', // এই হোস্টনেমটি যোগ করা হয়েছে
+        port: '',
+        pathname: '/**',
       }
     ],
   },
