@@ -246,9 +246,10 @@ export default function ProductPage() {
     </span>
     {/* dangerouslySetInnerHTML ব্যবহার করে HTML সাপোর্ট যোগ করা হয়েছে */}
     <div 
-        className="text-[13px] leading-relaxed text-gray-500 font-medium italic max-w-md prose prose-sm prose-stone"
-        dangerouslySetInnerHTML={{ __html: product.description }} 
-    />
+    className="text-[13px] leading-relaxed text-gray-500 font-medium italic max-w-md 
+               [&>ul]:list-disc [&>ul]:ml-4 [&>ul]:mt-2 [&>li]:mb-1 [&>b]:text-black"
+    dangerouslySetInnerHTML={{ __html: product.description }} 
+/>
 </div>
 
               {availableSizes.length > 0 && (
