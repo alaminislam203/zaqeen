@@ -365,6 +365,23 @@ export default function ProductPage() {
                        <HiOutlineShieldCheck className="text-emerald-500 w-5 h-5" />
                        <span className="text-[9px] font-black uppercase tracking-[0.3em]">Acquisition Security Protocol</span>
                     </div>
+                          {/* Payment Methods & Trust Signals */}
+<div className="pt-6 border-t border-gray-100 space-y-4">
+    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400">Accepted Protocols</span>
+    <div className="flex flex-wrap gap-4 grayscale opacity-60 hover:opacity-100 transition-opacity">
+        {/* আপনি এখানে সাধারণ আইকন বা টেক্সট ব্যবহার করতে পারেন */}
+        <div className="flex items-center gap-2">
+            <div className="w-8 h-5 bg-gray-100 rounded-sm flex items-center justify-center text-[8px] font-bold">Bkash</div>
+            <div className="w-8 h-5 bg-gray-100 rounded-sm flex items-center justify-center text-[8px] font-bold">Nagad</div>
+            <div className="w-8 h-5 bg-gray-100 rounded-sm flex items-center justify-center text-[8px] font-bold">COD</div>
+        </div>
+    </div>
+    <div className="flex items-center gap-2 text-[9px] font-bold text-emerald-600 uppercase tracking-widest">
+        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+        Verified Secure Checkout
+    </div>
+</div>
+                          
                     <p className="text-[9px] text-gray-400 font-bold tracking-widest leading-loose uppercase">
                         Every transaction is logged. fraudulent activity will trigger immediate legal audit. 2-4 business days for logistics.
                     </p>
