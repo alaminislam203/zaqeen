@@ -83,7 +83,7 @@ export const generateInvoice = (order) => {
     },
     didDrawCell: (data) => {
         if (data.section === 'body' && data.column.index === 3) {
-            doc.setDrawColor(245, 245, 245);
+            doc.setDrawColor(128, 128, 128);
             doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
         }
     }
