@@ -1,102 +1,63 @@
 'use client';
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { HiOutlineUserCircle, HiOutlineShoppingBag, HiOutlineHeart, HiOutlineCog, HiOutlineLogout } from 'react-icons/hi';
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
-import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter, usePathname } from 'next/navigation';
+import UserSidebar from '@/components/UserSidebar'; // ইউজার সাইডবার নিশ্চিত করুন
 
 export default function AccountLayout({ children }) {
-  const pathname = usePathname();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
-  const menuItems = [
-    { name: "Portfolio", path: "/account", icon: HiOutlineUserCircle },
-    { name: "Acquisitions", path: "/account/orders", icon: HiOutlineShoppingBag },
-    { name: "Wishlist", path: "/account/wishlist", icon: HiOutlineHeart },
-    { name: "Preferences", path: "/account/settings", icon: HiOutlineCog },
-  ];
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        // ইউজার লগইন করা থাকলে এক্সেস দিন
+        setIsAuthenticated(true);
+      } else {
+        // লগইন না থাকলে লগইন পেজে পাঠিয়ে দিন
+        // ইউজার লগইন পেজ সাধারণত '/login' হয়
+        router.push(`/login?redirect=${pathname}`);
+      }
+      setLoading(false);
+    });
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      toast.success("Identity Secured. Session Ended.");
-      router.push("/");
-    } catch (err) {
-      toast.error("Logout interrupted.");
-    }
-  };
+    return () => unsubscribe();
+  }, [router, pathname]);
 
-  return (
-    <main className="min-h-screen bg-[#FDFDFD]">
-  
-      
-      <div className="max-w-[1400px] mx-auto px-6 py-12 md:py-24">
-        <div className="flex flex-col lg:flex-row gap-16 xl:gap-24 items-start">
-          
-          {/* Sidebar: Navigation Engine */}
-          <aside className="w-full lg:w-[280px] lg:sticky lg:top-32 shrink-0">
-            <div className="mb-12">
-               <span className="text-[10px] uppercase tracking-[0.5em] text-gray-400 font-bold italic block mb-3">Concierge</span>
-               <h2 className="text-2xl font-black uppercase tracking-tighter italic text-gray-900 border-l-4 border-black pl-4">
-                  My Studio
-               </h2>
-            </div>
-
-            <nav className="space-y-1">
-              {menuItems.map((item) => {
-                const isActive = pathname === item.path;
-                return (
-                  <Link 
-                    key={item.path} 
-                    href={item.path}
-                    className={`group relative flex items-center gap-4 px-6 py-5 text-[10px] font-black uppercase tracking-[0.3em] transition-all duration-500 overflow-hidden ${
-                      isActive ? "text-white" : "text-gray-400 hover:text-black"
-                    }`}
-                  >
-                    {/* Background Slide Effect */}
-                    <div className={`absolute inset-0 bg-black transition-transform duration-500 -z-10 ${
-                      isActive ? "translate-x-0" : "-translate-x-full group-hover:translate-x-[-95%]"
-                    }`}></div>
-
-                    <item.icon className={`w-5 h-5 transition-transform duration-500 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
-                    <span className="relative">{item.name}</span>
-                  </Link>
-                );
-              })}
-              
-              <div className="pt-8 mt-8 border-t border-gray-100">
-                <button 
-                  onClick={handleLogout} 
-                  className="group flex items-center gap-4 px-6 py-5 w-full text-[10px] font-black uppercase tracking-[0.3em] text-rose-500 hover:bg-rose-50 transition-all duration-500 border border-transparent hover:border-rose-100"
-                >
-                  <HiOutlineLogout className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                  Sign Out
-                </button>
-              </div>
-            </nav>
-          </aside>
-
-          {/* Main Content: The Stage */}
-          <div className="flex-1 w-full animate-fadeIn min-h-[600px]">
-            <div className="bg-white border border-gray-50 p-8 md:p-14 shadow-[0_20px_60px_rgba(0,0,0,0.02)] rounded-sm">
-              {children}
-            </div>
-            
-            {/* Contextual Support Info */}
-            <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-6 opacity-30 px-2">
-               <p className="text-[9px] uppercase tracking-widest font-bold">Zaqeen Core Membership v2.0</p>
-               <div className="flex gap-8">
-                  <Link href="/help" className="text-[9px] uppercase tracking-widest font-bold hover:opacity-100">Client Service</Link>
-                  <Link href="/terms" className="text-[9px] uppercase tracking-widest font-bold hover:opacity-100">Legal Archives</Link>
-               </div>
-            </div>
-          </div>
-
-        </div>
+  // লোডিং স্টেট - প্রিমিয়াম অ্যানিমেশন সহ
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-white">
+        <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-[10px] uppercase tracking-[0.5em] font-black italic animate-pulse">
+          Syncing Identity Protocol...
+        </p>
       </div>
-    </main>
-  );
+    );
+  }
+
+  // ভেরিফাইড ইউজার হলে মূল কন্টেন্ট দেখাবে
+  return isAuthenticated ? (
+    <div className="flex flex-col md:flex-row min-h-screen bg-[#FDFDFD]">
+      {/* ইউজার সাইডবার - যা আমরা আগে কলাপসিবল এবং মোবাইল ফ্রেন্ডলি করেছিলাম */}
+      <UserSidebar />
+      
+      {/* মেইন কন্টেন্ট স্টেজ */}
+      <main className="flex-1 p-6 md:p-12 lg:p-20 overflow-x-hidden animate-fadeIn">
+        <div className="max-w-5xl mx-auto">
+           {children}
+        </div>
+        
+        {/* কন্টেন্ট ফুটার বা সাব-ইনফো */}
+        <div className="mt-20 pt-10 border-t border-gray-50 opacity-20 italic">
+            <p className="text-[8px] uppercase tracking-[0.5em] font-black">
+                Zaqeen User Access Protocol v2.0
+            </p>
+        </div>
+      </main>
+    </div>
+  ) : null;
 }
