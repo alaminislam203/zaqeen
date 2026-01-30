@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
     HiOutlineUser, HiOutlineShoppingBag, HiOutlineHeart, 
-    HiOutlineLocationMarker, HiOutlineLogout,HiOutlineUser, HiOutlineShieldCheck,
+    HiOutlineLocationMarker, HiOutlineLogout, HiOutlineUser, HiOutlineShieldCheck,
     HiMenuAlt4, HiX 
 } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebase';
