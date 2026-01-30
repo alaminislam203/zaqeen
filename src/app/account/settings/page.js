@@ -1,129 +1,167 @@
-"use client";
-import { useState, useEffect } from "react";
-import { db, auth } from "@/lib/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { HiOutlineUser, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineSave } from "react-icons/hi";
+'use client';
+import { useState } from 'react';
+import { auth } from '@/lib/firebase';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import toast from 'react-hot-toast';
+import { HiOutlineShieldCheck, HiOutlineLockClosed, HiOutlineKey, HiOutlineExclamationCircle } from 'react-icons/hi';
 
-export default function ProfileSettings() {
-  const [userData, setUserData] = useState({ name: "", phone: "", address: "" });
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const fetchUserData = async () => {
-          const docRef = doc(db, "users", currentUser.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setUserData(docSnap.data());
-          }
-        };
-        fetchUserData();
-      }
+export default function SecurityPage() {
+    const [updating, setUpdating] = useState(false);
+    const [formData, setFormData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
     });
-    return () => unsubscribe();
-  }, []);
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    if (!user) {
-      toast.error("Identity required for this action.");
-      return;
-    }
-    setLoading(true);
-    const updateToast = toast.loading("Updating your profile...");
-    try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, userData);
-      toast.success("Identity updated successfully.", { id: updateToast });
-    } catch (error) {
-      toast.error("Update failed. Please try again.", { id: updateToast });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handlePasswordUpdate = async (e) => {
+        e.preventDefault();
+        
+        if (formData.newPassword !== formData.confirmPassword) {
+            return toast.error("Blueprint Mismatch: Passwords do not match.");
+        }
 
-  return (
-    <div className="animate-fadeIn max-w-2xl">
-      {/* Header Section */}
-      <div className="flex justify-between items-baseline mb-12 border-b border-gray-50 pb-8">
-        <div className="space-y-1">
-          <span className="text-[10px] uppercase tracking-[0.5em] text-gray-400 font-bold">Preferences</span>
-          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic">Personal Identity</h1>
+        if (formData.newPassword.length < 8) {
+            return toast.error("Security Breach: Password must be at least 8 characters.");
+        }
+
+        setUpdating(true);
+        const loadingToast = toast.loading("Encrypting New Security Protocol...");
+
+        try {
+            const user = auth.currentUser;
+            
+            // ফায়ারবেসে পাসওয়ার্ড চেঞ্জ করার আগে রি-অথেন্টিকেশন প্রয়োজন হয়
+            const credential = EmailAuthProvider.credential(user.email, formData.currentPassword);
+            await reauthenticateWithCredential(user, credential);
+            
+            await updatePassword(user, formData.newPassword);
+            
+            toast.success("Security Protocol Updated. Access Secured.", { id: loadingToast });
+            setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            console.error(error);
+            toast.error("Auth Failure: Current password incorrect or session expired.", { id: loadingToast });
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    return (
+        <div className="max-w-3xl mx-auto animate-fadeIn">
+            {/* Header */}
+            <div className="mb-16 space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-300 italic block">Zaqeen Shield</span>
+                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic">Security Protocol</h1>
+                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-4 flex items-center gap-2">
+                    <HiOutlineShieldCheck className="text-emerald-500 text-lg" /> 
+                    End-to-End Encrypted Identity Management
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-12">
+                {/* Security Status Card */}
+                <div className="bg-black p-8 md:p-10 text-white rounded-sm border border-neutral-800 shadow-2xl relative overflow-hidden group">
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+                        <div className="space-y-2 text-center md:text-left">
+                            <h3 className="text-[12px] font-black uppercase tracking-[0.4em] italic">Access Authorization</h3>
+                            <p className="text-[10px] text-gray-500 font-bold tracking-widest leading-relaxed uppercase">
+                                Your account is currently protected by <br/> Zaqeen Multi-Layered Authentication.
+                            </p>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                             <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform duration-500">
+                                <HiOutlineShieldCheck className="text-emerald-500 text-2xl" />
+                             </div>
+                             <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500">System Active</span>
+                        </div>
+                    </div>
+                    {/* Background Decoration */}
+                    <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                        <HiOutlineLockClosed size={180} />
+                    </div>
+                </div>
+
+                {/* Password Update Form */}
+                <form onSubmit={handlePasswordUpdate} className="space-y-10">
+                    <div className="grid grid-cols-1 gap-8">
+                        <div className="space-y-3">
+                            <label className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 ml-1">Current Password Identity</label>
+                            <div className="relative group">
+                                <HiOutlineLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" />
+                                <input 
+                                    type="password" 
+                                    required
+                                    value={formData.currentPassword}
+                                    onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
+                                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-sm focus:border-black outline-none transition-all text-[11px] font-black uppercase tracking-widest"
+                                    placeholder="••••••••••••"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="h-[1px] bg-gray-50 w-full my-4"></div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 ml-1">New Security Key</label>
+                                <div className="relative group">
+                                    <HiOutlineKey className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" />
+                                    <input 
+                                        type="password" 
+                                        required
+                                        value={formData.newPassword}
+                                        onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
+                                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-sm focus:border-black outline-none transition-all text-[11px] font-black uppercase tracking-widest"
+                                        placeholder="••••••••••••"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 ml-1">Confirm Blueprint</label>
+                                <div className="relative group">
+                                    <HiOutlineKey className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" />
+                                    <input 
+                                        type="password" 
+                                        required
+                                        value={formData.confirmPassword}
+                                        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-sm focus:border-black outline-none transition-all text-[11px] font-black uppercase tracking-widest"
+                                        placeholder="••••••••••••"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center gap-8 pt-6">
+                        <button 
+                            type="submit" 
+                            disabled={updating}
+                            className="w-full md:w-auto px-16 py-6 bg-black text-white text-[11px] font-black uppercase tracking-[0.5em] transition-all hover:bg-neutral-900 active:scale-95 disabled:opacity-50 shadow-2xl relative overflow-hidden group/btn"
+                        >
+                            <span className="relative z-10">{updating ? 'Synchronizing...' : 'Update Security Protocol'}</span>
+                            <div className="absolute inset-0 bg-neutral-800 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
+                        </button>
+                        
+                        <div className="flex items-center gap-3 text-rose-500 opacity-60">
+                            <HiOutlineExclamationCircle size={16} />
+                            <p className="text-[8px] font-black uppercase tracking-widest italic">Changes take effect immediately.</p>
+                        </div>
+                    </div>
+                </form>
+
+                {/* Account Actions Warning */}
+                <div className="mt-20 p-8 border border-rose-50 bg-rose-50/10">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-600 mb-2 italic">Danger Zone</h4>
+                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed mb-6">
+                        Terminate account identity will permanently delete all your acquisition archives and saved portfolios. This action is irreversible.
+                    </p>
+                    <button className="text-[9px] font-black uppercase tracking-[0.4em] text-rose-500 border-b border-rose-200 hover:border-rose-500 transition-all pb-1 italic">
+                        Request Identity Termination
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-
-      <form onSubmit={handleUpdate} className="space-y-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Full Name Input */}
-          <div className="group space-y-2">
-            <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 group-focus-within:text-black transition-colors">
-              <HiOutlineUser size={14} /> Full Name
-            </label>
-            <input 
-              type="text" 
-              className="w-full bg-transparent border-b border-gray-100 py-3 text-sm font-bold tracking-tight outline-none focus:border-black transition-all placeholder:text-gray-200"
-              placeholder="E.G. ABDULLAH AL ZAQEEN"
-              value={userData.name || ''}
-              onChange={(e) => setUserData({...userData, name: e.target.value})}
-            />
-          </div>
-
-          {/* Phone Number Input */}
-          <div className="group space-y-2">
-            <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 group-focus-within:text-black transition-colors">
-              <HiOutlinePhone size={14} /> Phone Number
-            </label>
-            <input 
-              type="text" 
-              className="w-full bg-transparent border-b border-gray-100 py-3 text-sm font-mono font-bold tracking-widest outline-none focus:border-black transition-all placeholder:text-gray-200"
-              placeholder="+880 1XXX XXXXXX"
-              value={userData.phone || ''}
-              onChange={(e) => setUserData({...userData, phone: e.target.value})}
-            />
-          </div>
-        </div>
-
-        {/* Shipping Address Textarea */}
-        <div className="group space-y-2">
-          <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 group-focus-within:text-black transition-colors">
-            <HiOutlineLocationMarker size={14} /> Default Shipping Address
-          </label>
-          <textarea 
-            className="w-full bg-[#fcfcfc] border border-gray-50 p-6 text-[13px] font-light leading-relaxed focus:bg-white focus:border-black outline-none transition-all rounded-sm no-scrollbar min-h-[120px]"
-            placeholder="Provide house, road, and area details for seamless delivery..."
-            value={userData.address || ''}
-            onChange={(e) => setUserData({...userData, address: e.target.value})}
-          ></textarea>
-        </div>
-
-        {/* Action Button */}
-        <div className="pt-6">
-          <button 
-            disabled={loading} 
-            className="group relative w-full md:w-auto min-w-[200px] bg-black text-white px-10 py-5 text-[10px] font-black uppercase tracking-[0.4em] overflow-hidden shadow-2xl hover:shadow-black/20 transition-all disabled:opacity-30"
-          >
-            <span className="relative z-10 flex items-center justify-center gap-3">
-              {loading ? "Synchronizing..." : (
-                <>
-                  <HiOutlineSave size={18} /> Update Portfolio
-                </>
-              )}
-            </span>
-            <div className="absolute inset-0 bg-gray-800 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-          </button>
-        </div>
-      </form>
-
-      {/* Security Info Footnote */}
-      <div className="mt-20 pt-8 border-t border-gray-50 flex items-center gap-4 opacity-30">
-          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-          <p className="text-[8px] uppercase tracking-widest font-bold">Your information is encrypted within the Zaqeen ecosystem.</p>
-      </div>
-    </div>
-  );
+    );
 }
