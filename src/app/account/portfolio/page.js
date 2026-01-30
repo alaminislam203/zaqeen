@@ -4,7 +4,13 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import toast from 'react-hot-toast';
-import { HiOutlineUserCircle, HiOutlineMail, HiOutlinePhone, HiOutlineFingerPrint, HiOutlineCheckBadge } from 'react-icons/hi';
+import { 
+  HiOutlineUserCircle, 
+  HiOutlineMail, 
+  HiOutlinePhone, 
+  HiOutlineFingerPrint, 
+  HiOutlineBadgeCheck // Fixed name
+} from 'react-icons/hi';
 
 export default function PortfolioPage() {
     const [user, setUser] = useState(null);
