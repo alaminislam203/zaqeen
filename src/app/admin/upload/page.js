@@ -1,9 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { HiOutlineUpload, HiOutlinePhotograph, HiOutlineVideoCamera, HiOutlineTag, HiOutlineCurrencyDollar, HiOutlineCollection, HiOutlineSparkles, HiOutlineBackspace, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi';
+import { 
+    HiOutlineUpload, HiOutlinePhotograph, HiOutlineVideoCamera, 
+    HiOutlineTag, HiOutlineCurrencyDollar, HiOutlineCollection, 
+    HiOutlineSparkles, HiOutlineBackspace, HiOutlinePlus, HiOutlineTrash 
+} from 'react-icons/hi';
 
 const AddProductPage = () => {
     const [product, setProduct] = useState({
@@ -18,7 +22,7 @@ const AddProductPage = () => {
         images: ['', '', ''],
         videoUrl: ''
     });
-    const [stock, setStock] = useState({});
+    const [stock, setStock] = useState({ 'M': 0, 'L': 0, 'XL': 0 }); // ডিফল্ট সাইজ রাখা হয়েছে
     const [isSizeBased, setIsSizeBased] = useState(true);
     const [numericStock, setNumericStock] = useState('');
     const [newSize, setNewSize] = useState('');
@@ -36,8 +40,9 @@ const AddProductPage = () => {
     };
 
     const handleAddSize = () => {
-        if (newSize && !stock.hasOwnProperty(newSize)) {
-            setStock(prev => ({ ...prev, [newSize.toUpperCase()]: 0 }));
+        const upperSize = newSize.toUpperCase().trim();
+        if (upperSize && !stock.hasOwnProperty(upperSize)) {
+            setStock(prev => ({ ...prev, [upperSize]: 0 }));
             setNewSize('');
         }
     };
@@ -49,118 +54,190 @@ const AddProductPage = () => {
     };
 
     const handleStockChange = (size, value) => {
-        setStock(prev => ({ ...prev, [size]: Number(value) }));
+        setStock(prev => ({ ...prev, [size]: Math.max(0, parseInt(value) || 0) }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // ভ্যালিডেশন
         if (!product.name || !product.price || !product.imageUrl) {
-            toast.error('Please fill in Name, Price, and Main Image URL.');
+            toast.error('Identity Audit Failed: Name, Price, and Main Asset are required.', {
+                style: { borderRadius: '0px', background: '#000', color: '#fff' }
+            });
             return;
         }
 
         setSubmitting(true);
-        const loadingToast = toast.loading('Uploading product...');
+        const loadingToast = toast.loading('Syncing with Zaqeen Protocol...');
 
         try {
-            const stockData = isSizeBased ? stock : parseInt(numericStock, 10) || 0;
+            // ডাটা প্রসেসিং
+            const finalImages = [product.imageUrl, ...product.images.filter(img => img.trim() !== '')];
+            const stockData = isSizeBased ? stock : (parseInt(numericStock) || 0);
+
             const productData = {
                 ...product,
                 price: parseFloat(product.price),
                 discountPrice: product.discountPrice ? parseFloat(product.discountPrice) : null,
-                tags: product.tags.split(',').map(tag => tag.trim()),
+                tags: product.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
                 stock: stockData,
-                images: [product.imageUrl, ...product.images.filter(img => img !== '')],
-                createdAt: new Date(),
+                images: finalImages,
+                createdAt: serverTimestamp(), // Firebase Server Timestamp ব্যবহার করা ভালো
                 viewCount: 0,
                 salesCount: 0,
+                status: 'published'
             };
 
             await addDoc(collection(db, 'products'), productData);
+            
             toast.dismiss(loadingToast);
-            toast.success('Product successfully added!');
-            // Reset form
+            toast.success('Creation Logged: Product live in gallery.', {
+                style: { borderRadius: '0px', background: '#000', color: '#fff' }
+            });
+
+            // ফর্ম রিসেট
             setProduct({ name: '', description: '', price: '', discountPrice: '', category: '', tags: '', sku: '', imageUrl: '', images: ['', '', ''], videoUrl: '' });
-            setStock({});
+            setStock({ 'M': 0, 'L': 0, 'XL': 0 });
             setNumericStock('');
 
         } catch (error) { 
             toast.dismiss(loadingToast);
-            toast.error('Something went wrong. Please try again.');
+            toast.error('Transmission Breach: Check console for logs.');
             console.error("Error adding product: ", error);
         } finally {
             setSubmitting(false);
         }
     };
 
+    // প্রিমিয়াম ইনপুট ফিল্ড কম্পোনেন্ট
     const InputField = ({ icon, name, placeholder, value, onChange, type = "text" }) => (
-        <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">{icon}</div>
-            <input type={type} name={name} placeholder={placeholder} value={value} onChange={onChange}
-                className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-lg shadow-sm focus:ring-2 focus:ring-black/50 transition-all text-sm tracking-wide font-medium" />
+        <div className="group relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-300 group-focus-within:text-black transition-colors">{icon}</div>
+            <input 
+                type={type} 
+                name={name} 
+                placeholder={placeholder} 
+                value={value} 
+                onChange={onChange}
+                className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-sm focus:border-black outline-none transition-all text-[11px] font-black uppercase tracking-widest placeholder:text-gray-200" 
+            />
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-10">
+        <div className="min-h-screen bg-[#FDFDFD] p-6 sm:p-12 selection:bg-black selection:text-white">
             <div className="max-w-4xl mx-auto">
-                <header className="text-center mb-12"><h1 className="text-3xl font-black uppercase tracking-tighter italic">Add New Creation</h1><p className="text-sm text-gray-400 font-bold tracking-widest mt-1">Expand the Zaqeen Universe</p></header>
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    {/* Core Details */}
-                    <div className="p-8 bg-white border border-gray-100 rounded-lg shadow-lg shadow-black/[0.02]">
-                        <h2 className="text-lg font-bold tracking-tight mb-6 flex items-center gap-3"><HiOutlineSparkles/>Core Details</h2>
+                <header className="mb-20">
+                    <span className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-300 block mb-2 italic">Architecture</span>
+                    <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter italic">Create New Article</h1>
+                </header>
+
+                <form onSubmit={handleSubmit} className="space-y-12">
+                    {/* Core Blueprint */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4 pb-4 border-b border-gray-50">
+                            <span className="text-[10px] font-black uppercase tracking-widest">01. Core Blueprint</span>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="md:col-span-2"><InputField icon={<HiOutlineCollection/>} name="name" placeholder="Product Name" value={product.name} onChange={handleChange} /></div>
-                            <InputField icon={<HiOutlineCurrencyDollar/>} name="price" placeholder="Original Price (BDT)" value={product.price} onChange={handleChange} type="number" />
-                            <InputField icon={<HiOutlineTag/>} name="discountPrice" placeholder="Discount Price (Optional)" value={product.discountPrice} onChange={handleChange} type="number" />
-                            <InputField icon={<HiOutlineTag/>} name="category" placeholder="Category" value={product.category} onChange={handleChange} />
-                            <div className="md:col-span-2"><InputField icon={<HiOutlineTag/>} name="tags" placeholder="Tags (comma-separated)" value={product.tags} onChange={handleChange} /></div>
-                            <InputField icon={<HiOutlineBackspace/>} name="sku" placeholder="SKU" value={product.sku} onChange={handleChange} />
-                             <div className="md:col-span-2">
-                                <div className="relative">
-                                    <textarea name="description" placeholder="Product Description..." value={product.description} onChange={handleChange} rows="4" className="w-full px-4 py-4 bg-white border border-gray-100 rounded-lg shadow-sm focus:ring-2 focus:ring-black/50 transition-all text-sm tracking-wide font-medium"></textarea>
-                                </div>
+                            <div className="md:col-span-2">
+                                <InputField icon={<HiOutlineCollection/>} name="name" placeholder="Article Name" value={product.name} onChange={handleChange} />
+                            </div>
+                            <InputField icon={<HiOutlineCurrencyDollar/>} name="price" placeholder="Base Price (BDT)" value={product.price} onChange={handleChange} type="number" />
+                            <InputField icon={<HiOutlineTag/>} name="discountPrice" placeholder="Acquisition Price (Optional)" value={product.discountPrice} onChange={handleChange} type="number" />
+                            <InputField icon={<HiOutlineTag/>} name="category" placeholder="Category Archive" value={product.category} onChange={handleChange} />
+                            <InputField icon={<HiOutlineBackspace/>} name="sku" placeholder="Reference SKU" value={product.sku} onChange={handleChange} />
+                            <div className="md:col-span-2">
+                                <InputField icon={<HiOutlineTag/>} name="tags" placeholder="Keywords (Comma Separated)" value={product.tags} onChange={handleChange} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <textarea 
+                                    name="description" 
+                                    placeholder="Technical Narrative..." 
+                                    value={product.description} 
+                                    onChange={handleChange} 
+                                    rows="5" 
+                                    className="w-full px-6 py-5 bg-white border border-gray-100 rounded-sm focus:border-black outline-none transition-all text-[11px] font-black uppercase tracking-widest placeholder:text-gray-200 italic"
+                                ></textarea>
                             </div>
                         </div>
                     </div>
 
-                    {/* Stock Management */}
-                    <div className="p-8 bg-white border border-gray-100 rounded-lg shadow-lg shadow-black/[0.02]">
-                         <h2 className="text-lg font-bold tracking-tight mb-6">Stock Management</h2>
-                        <div className="flex items-center gap-4 mb-6">
-                            <label className="flex items-center cursor-pointer"><input type="radio" name="stockType" checked={isSizeBased} onChange={() => setIsSizeBased(true)} className="mr-2"/><span className="text-sm font-bold">Size-based Stock</span></label>
-                            <label className="flex items-center cursor-pointer"><input type="radio" name="stockType" checked={!isSizeBased} onChange={() => setIsSizeBased(false)} className="mr-2"/><span className="text-sm font-bold">Numeric Stock</span></label>
+                    {/* Logistics & Stock */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4 pb-4 border-b border-gray-50">
+                            <span className="text-[10px] font-black uppercase tracking-widest">02. Inventory Logistics</span>
                         </div>
+                        <div className="flex gap-8 mb-8">
+                            {['Size-based', 'Numeric'].map((type) => (
+                                <button 
+                                    key={type}
+                                    type="button"
+                                    onClick={() => setIsSizeBased(type === 'Size-based')}
+                                    className={`text-[9px] font-black uppercase tracking-[0.3em] pb-1 border-b-2 transition-all ${((isSizeBased && type === 'Size-based') || (!isSizeBased && type === 'Numeric')) ? 'border-black text-black' : 'border-transparent text-gray-300'}`}
+                                >
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
+
                         {isSizeBased ? (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <input type="text" value={newSize} onChange={(e) => setNewSize(e.target.value)} placeholder="Add Size (e.g., M)" className="w-full input"/>
-                                    <button type="button" onClick={handleAddSize} className="p-3 bg-gray-200 rounded-lg hover:bg-gray-300"><HiOutlinePlus/></button>
-                                </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 {Object.keys(stock).map(size => (
-                                    <div key={size} className="flex items-center gap-4 p-2 rounded-lg bg-gray-50/50">
-                                        <span className="font-bold w-20 text-center">{size}</span>
-                                        <input type="number" value={stock[size]} onChange={(e) => handleStockChange(size, e.target.value)} placeholder="Quantity" className="w-full input" />
-                                        <button type="button" onClick={() => handleRemoveSize(size)} className="p-2 text-rose-500 hover:bg-rose-100 rounded-full"><HiOutlineTrash/></button>
+                                    <div key={size} className="flex items-center border border-gray-50 p-2 group hover:border-black transition-colors">
+                                        <span className="text-[10px] font-black w-12 text-center">{size}</span>
+                                        <input 
+                                            type="number" 
+                                            value={stock[size]} 
+                                            onChange={(e) => handleStockChange(size, e.target.value)} 
+                                            className="w-full bg-transparent outline-none text-[11px] font-bold px-2" 
+                                        />
+                                        <button type="button" onClick={() => handleRemoveSize(size)} className="p-2 text-gray-200 hover:text-rose-500 transition-colors"><HiOutlineTrash/></button>
                                     </div>
                                 ))}
+                                <div className="flex items-center border border-dashed border-gray-200 p-2">
+                                    <input 
+                                        type="text" 
+                                        value={newSize} 
+                                        onChange={(e) => setNewSize(e.target.value)} 
+                                        placeholder="NEW" 
+                                        className="w-full bg-transparent outline-none text-[10px] font-black uppercase px-2"
+                                    />
+                                    <button type="button" onClick={handleAddSize} className="p-2 hover:bg-black hover:text-white transition-all"><HiOutlinePlus/></button>
+                                </div>
                             </div>
                         ) : (
-                            <InputField icon={<HiOutlineCollection/>} name="numericStock" placeholder="Total Stock Quantity" value={numericStock} onChange={(e) => setNumericStock(e.target.value)} type="number" />
+                            <InputField icon={<HiOutlineCollection/>} name="numericStock" placeholder="Total Unit Count" value={numericStock} onChange={(e) => setNumericStock(e.target.value)} type="number" />
                         )}
                     </div>
 
-                    {/* Media */}
-                    <div className="p-8 bg-white border border-gray-100 rounded-lg shadow-lg shadow-black/[0.02]">
-                        <h2 className="text-lg font-bold tracking-tight mb-6 flex items-center gap-3"><HiOutlinePhotograph/>Product Media</h2>
-                        <div className="space-y-4">
-                            <InputField icon={<HiOutlinePhotograph/>} name="imageUrl" placeholder="Main Image URL *" value={product.imageUrl} onChange={handleChange} />
-                            {product.images.map((img, index) => (<InputField key={index} icon={<HiOutlinePhotograph/>} placeholder={`Additional Image URL ${index + 1}`} value={img} onChange={(e) => handleImageChange(index, e.target.value)} />))}
-                            <InputField icon={<HiOutlineVideoCamera/>} name="videoUrl" placeholder="YouTube/Vimeo Video URL (Optional)" value={product.videoUrl} onChange={handleChange} />
+                    {/* Visual Assets */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4 pb-4 border-b border-gray-50">
+                            <span className="text-[10px] font-black uppercase tracking-widest">03. Visual Assets</span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                            <InputField icon={<HiOutlinePhotograph/>} name="imageUrl" placeholder="Primary Visual URL *" value={product.imageUrl} onChange={handleChange} />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {product.images.map((img, index) => (
+                                    <InputField key={index} icon={<HiOutlinePhotograph/>} placeholder={`Perspective ${index + 1}`} value={img} onChange={(e) => handleImageChange(index, e.target.value)} />
+                                ))}
+                            </div>
+                            <InputField icon={<HiOutlineVideoCamera/>} name="videoUrl" placeholder="Motion Asset URL (MP4/YouTube)" value={product.videoUrl} onChange={handleChange} />
                         </div>
                     </div>
 
-                    <div className="flex justify-end pt-6"><button type="submit" disabled={submitting} className="group relative flex items-center justify-center gap-3 w-full md:w-auto bg-black text-white px-12 py-5 text-sm font-bold uppercase tracking-widest rounded-lg shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/30 disabled:opacity-50 transition-all"><span className="relative z-10">{submitting ? 'Publishing...' : 'Publish Product'}</span><HiOutlineUpload className="relative z-10 w-5 h-5 group-hover:animate-pulse"/></button></div>
+                    <button 
+                        type="submit" 
+                        disabled={submitting} 
+                        className="w-full bg-black text-white py-8 text-[11px] font-black uppercase tracking-[0.5em] group overflow-hidden relative active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                        <span className="relative z-10 flex items-center justify-center gap-4">
+                            {submitting ? 'Archiving...' : 'Publish to Gallery'}
+                            <HiOutlineUpload size={18} className="group-hover:-translate-y-1 transition-transform" />
+                        </span>
+                        <div className="absolute inset-0 bg-neutral-900 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+                    </button>
                 </form>
             </div>
         </div>
