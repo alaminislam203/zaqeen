@@ -6,10 +6,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { 
   HiOutlineUserCircle, 
-  HiOutlineMail, 
   HiOutlinePhone, 
   HiOutlineFingerPrint, 
-  HiOutlineBadgeCheck // Fixed name
+  HiOutlineBadgeCheck // নিশ্চিত করুন এটি আপনার আইকন লাইব্রেরিতে আছে
 } from 'react-icons/hi';
 
 export default function PortfolioPage() {
@@ -17,7 +16,6 @@ export default function PortfolioPage() {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     
-    // প্রোফাইল ডেটা স্টেট
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
@@ -26,18 +24,23 @@ export default function PortfolioPage() {
     });
 
     useEffect(() => {
+        // onAuthStateChanged সার্ভার সাইড এরর প্রতিরোধ করে
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    setFormData({
-                        name: data.name || '',
-                        phone: data.phone || '',
-                        address: data.address || '',
-                        email: currentUser.email || ''
-                    });
+                try {
+                    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        setFormData({
+                            name: data.name || '',
+                            phone: data.phone || '',
+                            address: data.address || '',
+                            email: currentUser.email || ''
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error fetching user document:", error);
                 }
             }
             setLoading(false);
@@ -47,6 +50,8 @@ export default function PortfolioPage() {
 
     const handleUpdate = async (e) => {
         e.preventDefault();
+        if (!user) return;
+
         setUpdating(true);
         const loadingToast = toast.loading("Updating Identity Protocol...");
 
@@ -56,11 +61,12 @@ export default function PortfolioPage() {
                 name: formData.name,
                 phone: formData.phone,
                 address: formData.address,
-                lastUpdated: new Date()
+                lastUpdated: new Date().toISOString() // সার্ভার সেফ ডেট ফরম্যাট
             });
             toast.success("Profile Authenticated & Updated.", { id: loadingToast });
         } catch (error) {
             toast.error("Update Interrupted. Check Connection.", { id: loadingToast });
+            console.error("Update error:", error);
         } finally {
             setUpdating(false);
         }
@@ -74,12 +80,12 @@ export default function PortfolioPage() {
 
     return (
         <div className="max-w-3xl mx-auto animate-fadeIn">
-            {/* --- Header Section --- */}
+            {/* Header Section */}
             <div className="mb-16 space-y-2">
                 <span className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-300 italic block">Zaqeen Core</span>
                 <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic">Profile Identity</h1>
                 <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-4 flex items-center gap-2">
-                    <HiOutlineCheckBadge className="text-black text-lg" /> 
+                    <HiOutlineBadgeCheck className="text-black text-lg" /> 
                     Authorized Member since {user?.metadata?.creationTime ? new Date(user.metadata.creationTime).getFullYear() : '2026'}
                 </p>
             </div>
@@ -93,7 +99,7 @@ export default function PortfolioPage() {
                     <div className="text-center sm:text-left space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400">Account Type</p>
                         <h2 className="text-xl font-black uppercase tracking-widest italic">The Collector</h2>
-                        <p className="text-[11px] font-bold text-gray-300 italic lowercase">{user?.email}</p>
+                        <p className="text-[11px] font-bold text-gray-300 italic lowercase">{formData.email}</p>
                     </div>
                 </div>
 
@@ -142,7 +148,6 @@ export default function PortfolioPage() {
                     </div>
                 </div>
 
-                {/* Submit Action */}
                 <div className="pt-6">
                     <button 
                         type="submit" 
