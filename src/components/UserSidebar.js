@@ -31,7 +31,7 @@ const UserSidebar = () => {
         { href: '/account/wishlist', icon: <HiOutlineHeart size={20} />, text: 'WishList' },
         { href: '/account/portfolio', icon: <HiOutlineUserCircle size={20} />, text: 'Portfolio' },
         { href: '/account/address', icon: <HiOutlineLocationMarker size={20} />, text: 'Logistics' },
-        { href: '/account/security', icon: <HiOutlineShieldCheck size={20} />, text: 'Security' },
+        { href: '/account/setting', icon: <HiOutlineShieldCheck size={20} />, text: 'Security' },
     ];
 
     const handleLogout = () => {
