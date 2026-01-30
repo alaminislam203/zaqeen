@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { v4 as uuidv4 } from 'uuid';
 import { HiOutlineChatAlt2, HiOutlineX, HiOutlinePaperAirplane, HiOutlineUserCircle } from 'react-icons/hi';
 import { debounce } from 'lodash';
+import toast from 'react-hot-toast';
 
 const LiveChatWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +19,7 @@ const LiveChatWidget = () => {
     const [isAdminTyping, setIsAdminTyping] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // সেশন এবং নাম হ্যান্ডলিং
+    // সেশন এবং আইডেন্টিটি রিকভারি
     useEffect(() => {
         let storedSessionId = localStorage.getItem('chatSessionId');
         if (!storedSessionId) {
@@ -34,7 +35,7 @@ const LiveChatWidget = () => {
         }
     }, []);
 
-    // মেসেজ এবং টাইপিং লিসেনার
+    // রিয়েল-টাইম মেসেজিং এবং টাইটিং প্রোটোকল
     useEffect(() => {
         if (!sessionId || !isNameSet) return;
 
@@ -68,7 +69,7 @@ const LiveChatWidget = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isAdminTyping]);
 
-    // টাইপিং স্ট্যাটাস আপডেট (Debounced)
+    // টাইপিং স্ট্যাটাস (Debounced for Server Efficiency)
     const updateTypingStatus = useCallback(debounce((isTyping) => {
         if (sessionId) {
             setDoc(doc(db, 'chats', sessionId), { isUserTyping: isTyping }, { merge: true });
@@ -76,9 +77,7 @@ const LiveChatWidget = () => {
     }, 500), [sessionId]);
 
     useEffect(() => {
-        if (newMessage) {
-            updateTypingStatus(true);
-        }
+        if (newMessage) updateTypingStatus(true);
         const timeoutId = setTimeout(() => updateTypingStatus(false), 3000);
         return () => clearTimeout(timeoutId);
     }, [newMessage, updateTypingStatus]);
@@ -97,7 +96,7 @@ const LiveChatWidget = () => {
 
     const handleNameSubmit = async (e) => {
         e.preventDefault();
-        if (nameInput.trim() === '' || !sessionId) return;
+        if (nameInput.trim().length < 2 || !sessionId) return;
         
         localStorage.setItem('chatUserName', nameInput);
         setUserName(nameInput);
@@ -107,12 +106,12 @@ const LiveChatWidget = () => {
         await setDoc(chatRef, { 
             userName: nameInput, 
             createdAt: serverTimestamp(),
+            isUnreadForAdmin: true,
             status: 'active' 
         }, { merge: true });
 
-        // অটোমেটিক গ্রিটিং মেসেজ (ব্র্যান্ডের গাম্ভীর্য রক্ষায়)
         await addDoc(collection(chatRef, 'messages'), {
-            text: `Welcome, ${nameInput}. How may our concierge assist you today?`,
+            text: `Welcome to the Archive, ${nameInput}. Our consultant will be with you shortly.`,
             timestamp: serverTimestamp(),
             sender: 'admin'
         });
@@ -143,86 +142,105 @@ const LiveChatWidget = () => {
 
     return (
         <div className="fixed bottom-6 right-6 z-[9999] selection:bg-black selection:text-white font-sans">
-            {/* Chat Toggle Button */}
+            {/* Action Trigger */}
             <button 
                 onClick={handleToggleChat} 
-                className="w-16 h-16 bg-black text-white rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex items-center justify-center hover:scale-110 transition-all duration-500 relative group"
+                className={`flex items-center justify-center rounded-full shadow-2xl transition-all duration-500 relative group
+                ${isOpen ? 'w-12 h-12 bg-white text-black border border-gray-100 rotate-90' : 'w-16 h-16 bg-black text-white hover:scale-105'}`}
             >
                 {hasUnread && !isOpen && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-[3px] border-white animate-bounce"></span>
                 )}
-                {isOpen ? <HiOutlineX size={24} /> : <HiOutlineChatAlt2 size={28} className="group-hover:rotate-12 transition-transform" />}
+                {isOpen ? <HiX size={20} /> : <HiOutlineChatAlt2 size={28} className="group-hover:rotate-12 transition-transform" />}
             </button>
 
-            {/* Chat Window */}
+            {/* Chat Architecture */}
             {isOpen && (
-                <div className="absolute bottom-20 right-0 w-[22rem] h-[32rem] bg-white border border-gray-100 rounded-sm shadow-[0_40px_100px_rgba(0,0,0,0.1)] flex flex-col animate-fadeIn overflow-hidden">
+                <div className={`
+                    fixed md:absolute bottom-0 md:bottom-20 right-0 w-screen md:w-[24rem] h-[100dvh] md:h-[35rem] 
+                    bg-white md:rounded-sm shadow-[0_40px_100px_rgba(0,0,0,0.15)] flex flex-col animate-fadeIn overflow-hidden
+                    ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'} transition-all
+                `}>
                     {!isNameSet ? (
-                        <div className="flex flex-col items-center justify-center h-full p-10 text-center space-y-8">
-                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
-                                <HiOutlineUserCircle size={40} className="text-gray-300" />
+                        <div className="flex flex-col items-center justify-center h-full p-10 text-center space-y-8 bg-[#FDFDFD]">
+                            <div className="w-20 h-20 bg-black text-white rounded-full flex items-center justify-center shadow-2xl animate-pulse">
+                                <HiOutlineUserCircle size={40} />
                             </div>
                             <div className="space-y-2">
-                                <span className="text-[9px] uppercase tracking-[0.4em] text-gray-400 font-black italic block">Verification</span>
-                                <h3 className="font-black text-xl uppercase tracking-tighter italic">Identity?</h3>
+                                <span className="text-[9px] uppercase tracking-[0.5em] text-gray-400 font-black italic block">Verification Identity</span>
+                                <h3 className="font-black text-2xl uppercase tracking-tighter italic">Who is calling?</h3>
                             </div>
                              <form onSubmit={handleNameSubmit} className="w-full space-y-4">
                                 <input
                                     type="text"
                                     value={nameInput}
                                     onChange={(e) => setNameInput(e.target.value)}
-                                    placeholder="ENTER YOUR NAME"
-                                    className="w-full bg-gray-50 border-none p-4 text-[11px] font-black tracking-widest outline-none focus:ring-1 ring-black transition rounded-sm"
+                                    placeholder="IDENTIFIER NAME"
+                                    className="w-full bg-white border border-gray-100 p-5 text-[11px] font-black tracking-[0.3em] outline-none focus:border-black transition-all text-center"
                                 />
-                                <button type="submit" className="w-full p-4 bg-black text-white text-[10px] font-black uppercase tracking-[0.4em] hover:bg-gray-800 transition shadow-xl">Initiate Access</button>
+                                <button type="submit" className="w-full p-5 bg-black text-white text-[10px] font-black uppercase tracking-[0.4em] hover:bg-neutral-800 transition shadow-xl">Initiate Protocol</button>
                             </form>
                         </div>
                     ) : (
                         <>
-                            {/* Header */}
-                            <header className="p-6 bg-black text-white flex flex-col space-y-1">
-                                <span className="text-[8px] uppercase tracking-[0.4em] font-black text-gray-500">Zaqeen Concierge</span>
-                                <h3 className="font-black uppercase tracking-widest text-xs italic">Greetings, {userName}</h3>
-                                {isAdminTyping && <p className="text-[9px] italic text-emerald-400 animate-pulse">Consultant is typing...</p>}
+                            {/* Header Hub */}
+                            <header className="p-6 bg-black text-white flex justify-between items-center">
+                                <div className="space-y-1">
+                                    <span className="text-[8px] uppercase tracking-[0.5em] font-black text-gray-500 italic block">Zaqeen Protocol</span>
+                                    <h3 className="font-black uppercase tracking-widest text-xs italic">Greetings, {userName}</h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                     <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Consultant Online</span>
+                                </div>
                             </header>
 
-                            {/* Message Area */}
-                            <div className="flex-grow p-6 overflow-y-auto bg-[#FDFDFD] space-y-4 scrollbar-hide">
+                            {/* Message Ledger */}
+                            <div className="flex-grow p-6 overflow-y-auto bg-white space-y-6 custom-scrollbar">
                                 {messages.map(msg => (
                                     <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] px-4 py-3 text-[12px] leading-relaxed ${
+                                        <div className={`max-w-[85%] px-5 py-3 text-[12px] font-medium leading-relaxed shadow-sm transition-all ${
                                             msg.sender === 'user' 
-                                            ? 'bg-black text-white rounded-l-2xl rounded-tr-2xl' 
-                                            : 'bg-white border border-gray-100 text-gray-700 rounded-r-2xl rounded-tl-2xl shadow-sm'
+                                            ? 'bg-black text-white rounded-l-2xl rounded-tr-sm' 
+                                            : 'bg-gray-50 border border-gray-100 text-gray-800 rounded-r-2xl rounded-tl-sm'
                                         }`}>
                                             {msg.text}
-                                            {msg.timestamp && (
-                                                <span className={`block text-[7px] mt-2 opacity-40 font-black uppercase tracking-widest ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
-                                                    {new Date(msg.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                </span>
-                                            )}
+                                            <span className={`block text-[7px] mt-2 opacity-30 font-black uppercase tracking-widest ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
+                                                {msg.timestamp?.toDate ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Syncing'}
+                                            </span>
                                         </div>
                                     </div>
                                 ))}
+                                {isAdminTyping && (
+                                    <div className="flex justify-start animate-pulse">
+                                        <div className="bg-gray-50 border border-gray-100 px-4 py-2 rounded-full">
+                                            <div className="flex gap-1">
+                                                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                                                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-100"></div>
+                                                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Input Area */}
-                            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-50">
-                                <div className="flex items-center gap-3 bg-gray-50 rounded-full px-4 py-1 border border-transparent focus-within:border-gray-200 focus-within:bg-white transition-all">
+                            {/* Input Console */}
+                            <form onSubmit={handleSendMessage} className="p-6 bg-white border-t border-gray-50">
+                                <div className="flex items-center gap-4 bg-gray-50 p-2 rounded-sm border border-transparent focus-within:border-black transition-all duration-500">
                                     <input
                                         type="text"
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         placeholder="Type your inquiry..."
-                                        className="w-full py-3 bg-transparent text-[11px] font-bold tracking-tight outline-none placeholder:text-gray-300"
+                                        className="w-full px-4 py-2 bg-transparent text-[11px] font-bold tracking-tight outline-none"
                                     />
                                     <button 
                                         type="submit" 
-                                        className={`p-2 transition-all ${newMessage.trim() ? 'text-black' : 'text-gray-200'}`}
+                                        className={`p-3 transition-all ${newMessage.trim() ? 'bg-black text-white' : 'text-gray-200'}`}
                                         disabled={!newMessage.trim()}
                                     >
-                                        <HiOutlinePaperAirplane size={20} className="rotate-45" />
+                                        <HiOutlinePaperAirplane size={18} className="rotate-90" />
                                     </button>
                                 </div>
                             </form>
