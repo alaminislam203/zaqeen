@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
     HiOutlineUser, HiOutlineShoppingBag, HiOutlineHeart, 
-    HiOutlineLocationMarker, HiOutlineLogout, HiOutlineShieldCheck,
+    HiOutlineLocationMarker, HiOutlineLogout,HiOutlineUser, HiOutlineShieldCheck,
     HiMenuAlt4, HiX 
 } from 'react-icons/hi';
 import { auth, db } from '@/lib/firebase';
@@ -28,7 +28,8 @@ const UserSidebar = () => {
     const navItems = [
         { href: '/account', icon: <HiOutlineUser size={20} />, text: 'Profile' },
         { href: '/account/orders', icon: <HiOutlineShoppingBag size={20} />, text: 'Orders' },
-        { href: '/account/wishlist', icon: <HiOutlineHeart size={20} />, text: 'Portfolio' },
+        { href: '/account/wishlist', icon: <HiOutlineHeart size={20} />, text: 'WishList' },
+        { href: '/account/portfolio', icon: <HiOutlineUser size={20} />, text: 'Portfolio' },
         { href: '/account/address', icon: <HiOutlineLocationMarker size={20} />, text: 'Logistics' },
         { href: '/account/security', icon: <HiOutlineShieldCheck size={20} />, text: 'Security' },
     ];
