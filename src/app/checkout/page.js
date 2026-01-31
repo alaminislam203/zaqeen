@@ -101,7 +101,7 @@ export default function CheckoutPage() {
 
         if (!couponData.active) setCouponError("Coupon inactive");
         else if (expiryDate && expiryDate < now) setCouponError("Coupon expired");
-        else if (subtotal < (couponData.minSpend || 0)) setCouponError(`Min spend \u09F3${couponData.minSpend} required`);
+        else if (subtotal < (couponData.minSpend || 0)) setCouponError(`Min spend &#2547; ${couponData.minSpend} required`);
         else {
           let calcDiscount = couponData.type === 'percentage' ? (subtotal * couponData.value) / 100 : couponData.value;
           setDiscount(calcDiscount);
