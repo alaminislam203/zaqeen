@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import toast from 'react-hot-toast';
-import { HiOutlineChatAlt2, HiOutlineTrash, HiOutlineCheckCircle, HiOutlineExclamationCircle } from 'react-icons/hi';
+import { HiOutlineChatAlt2, HiOutlineTrash, HiCheckCircle, HiOutlineExclamation, HiOutlineArrowLeft, HiOutlineMail } from 'react-icons/hi';
 import { format } from 'date-fns';
 
 export default function MessagesPage() {
@@ -17,7 +17,7 @@ export default function MessagesPage() {
             const msgs = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate() // Convert Firestore Timestamp to JS Date
+                createdAt: doc.data().createdAt?.toDate()
             }));
             setMessages(msgs);
             setLoading(false);
@@ -29,88 +29,148 @@ export default function MessagesPage() {
         const messageRef = doc(db, 'contacts', id);
         try {
             await updateDoc(messageRef, { status: newStatus });
-            toast.success(`Message marked as ${newStatus}.`);
+            toast.success(`Protocol: Message marked as ${newStatus}.`, {
+                style: { borderRadius: '0px', background: '#000', color: '#fff', fontSize: '10px' }
+            });
             if(selectedMessage && selectedMessage.id === id) {
                 setSelectedMessage({...selectedMessage, status: newStatus});
             }
         } catch (error) {
-            toast.error('Failed to update status.');
+            toast.error('Audit Failure.');
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this message?')) {
+        if (window.confirm('Delete this transmission from the archive?')) {
             try {
                 await deleteDoc(doc(db, 'contacts', id));
-                toast.success('Message deleted.');
-                setSelectedMessage(null); // Close detail view if the selected message is deleted
+                toast.success('Archive Cleared.');
+                setSelectedMessage(null);
             } catch (error) {
-                toast.error('Failed to delete message.');
+                toast.error('System Breach: Failed to delete.');
             }
         }
     };
     
-    if (loading) {
-        return <div className="h-screen flex items-center justify-center bg-gray-50"><p>Loading messages...</p></div>;
-    }
+    if (loading) return (
+        <div className="h-screen flex flex-col items-center justify-center bg-white">
+            <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-[9px] uppercase tracking-[0.5em] font-black italic">Synchronizing Inbox</p>
+        </div>
+    );
 
     return (
-        <div className="flex h-screen bg-gray-50">
-            {/* Message List Panel */}
-            <div className={`w-full md:w-1/3 border-r border-gray-100 bg-white h-screen overflow-y-auto ${selectedMessage ? 'hidden md:block' : 'block'}`}>
-                <header className="p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
-                     <h1 className="text-xl font-black uppercase tracking-tighter italic">Inbox</h1>
-                     <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Customer Inquiries</p>
+        <main className="flex h-screen bg-[#FDFDFD] selection:bg-black selection:text-white">
+            
+            {/* --- Left Panel: Ledger of Inquiries --- */}
+            <div className={`w-full md:w-[400px] border-r border-gray-50 bg-white h-screen flex flex-col ${selectedMessage ? 'hidden md:flex' : 'flex'}`}>
+                <header className="p-8 border-b border-gray-50 space-y-2">
+                     <h1 className="text-2xl font-black uppercase tracking-tighter italic">Archives</h1>
+                     <p className="text-[9px] uppercase tracking-[0.4em] text-gray-300 font-black italic">Public Communications</p>
                 </header>
-                <div>
+
+                <div className="overflow-y-auto flex-grow custom-scrollbar">
                     {messages.length > 0 ? messages.map(msg => (
                         <div 
                             key={msg.id} 
                             onClick={() => setSelectedMessage(msg)}
-                            className={`p-6 border-b border-gray-100 cursor-pointer ${selectedMessage?.id === msg.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                            <div className="flex justify-between items-start">
-                                <p className="font-bold text-sm tracking-wide">{msg.name}</p>
-                                <span className="text-xs text-gray-400">{msg.createdAt ? format(msg.createdAt, 'PP') : 'N/A'}</span>
+                            className={`p-8 border-b border-gray-50 cursor-pointer transition-all duration-500 relative group
+                            ${selectedMessage?.id === msg.id ? 'bg-black text-white shadow-2xl' : 'hover:bg-gray-50'}`}>
+                            
+                            <div className="flex justify-between items-start mb-3">
+                                <p className={`text-[11px] font-black uppercase tracking-widest ${selectedMessage?.id === msg.id ? 'text-white' : 'text-gray-900'}`}>
+                                    {msg.name}
+                                </p>
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${selectedMessage?.id === msg.id ? 'text-gray-500' : 'text-gray-300'}`}>
+                                    {msg.createdAt ? format(msg.createdAt, 'dd MMM') : 'N/A'}
+                                </span>
                             </div>
-                            <p className="text-xs text-gray-600 mt-1 truncate">{msg.subject}</p>
-                            <p className="text-xs text-gray-400 mt-2 truncate">{msg.message}</p>
+                            
+                            <p className={`text-[10px] font-bold uppercase tracking-tight truncate italic ${selectedMessage?.id === msg.id ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {msg.subject}
+                            </p>
+                            
+                            {/* Status Indicator Bubble */}
+                            <div className={`absolute top-1/2 right-4 -translate-y-1/2 w-1.5 h-1.5 rounded-full
+                                ${msg.status === 'Resolved' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-amber-500 animate-pulse'}
+                                ${selectedMessage?.id === msg.id ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'}`}>
+                            </div>
                         </div>
                     )) : (
-                         <p className="text-center text-sm text-gray-400 p-20">No messages yet.</p>
+                         <div className="flex flex-col items-center justify-center h-64 text-center space-y-4">
+                            <HiOutlineMail className="text-gray-100" size={40} />
+                            <p className="text-[10px] uppercase tracking-[0.4em] text-gray-300 font-black italic">Vault Void</p>
+                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Message Detail Panel */}
-            <div className={`w-full md:w-2/3 h-screen overflow-y-auto ${selectedMessage ? 'block' : 'hidden md:flex'} md:items-center md:justify-center`}>
+            {/* --- Right Panel: Transmission Detail --- */}
+            <div className={`flex-grow h-screen bg-[#FAFAFA] overflow-y-auto ${selectedMessage ? 'block' : 'hidden md:flex'} md:items-center md:justify-center`}>
                 {selectedMessage ? (
-                    <div className="w-full h-full">
-                         <header className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-                           <div>
-                             <button onClick={() => setSelectedMessage(null)} className="md:hidden font-bold text-sm mb-2">← Back</button>
-                             <h2 className="font-bold text-lg">{selectedMessage.subject}</h2>
-                             <p className="text-sm text-gray-600">From: <span className="font-bold">{selectedMessage.name}</span> ({selectedMessage.email})</p>
-                            </div>
-                             <div className="flex items-center gap-2">
-                                <button onClick={() => handleStatusChange(selectedMessage.id, selectedMessage.status === 'Resolved' ? 'Pending' : 'Resolved')} 
-                                    className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-lg transition ${selectedMessage.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                                        {selectedMessage.status === 'Resolved' ? <HiOutlineCheckCircle/> : <HiOutlineExclamationCircle/>}
-                                        {selectedMessage.status || 'Pending'}
+                    <div className="w-full h-full flex flex-col bg-white animate-fadeIn">
+                         <header className="p-8 md:p-12 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-white sticky top-0 z-10 shadow-sm">
+                            <div className="space-y-4">
+                                <button onClick={() => setSelectedMessage(null)} className="md:hidden flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                    <HiOutlineArrowLeft /> Archive
                                 </button>
-                                <button onClick={() => handleDelete(selectedMessage.id)} className="p-3 text-rose-500 hover:bg-rose-100 rounded-full transition"><HiOutlineTrash size={18}/></button>
+                                <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter italic leading-none">{selectedMessage.subject}</h2>
+                                <div className="flex flex-wrap gap-4 items-center">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic underline decoration-gray-100 underline-offset-4">{selectedMessage.email}</span>
+                                    <span className="w-1 h-1 bg-gray-200 rounded-full"></span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Transmission {format(selectedMessage.createdAt, 'PPP p')}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                                <button 
+                                    onClick={() => handleStatusChange(selectedMessage.id, selectedMessage.status === 'Resolved' ? 'Pending' : 'Resolved')} 
+                                    className={`flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.3em] px-8 py-4 rounded-sm transition-all shadow-lg italic
+                                    ${selectedMessage.status === 'Resolved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-black text-white'}`}>
+                                    {selectedMessage.status === 'Resolved' ? <HiCheckCircle size={16}/> : <HiOutlineExclamation size={16}/>}
+                                    {selectedMessage.status || 'Mark Verified'}
+                                </button>
+                                <button 
+                                    onClick={() => handleDelete(selectedMessage.id)} 
+                                    className="p-4 text-gray-300 hover:text-rose-500 border border-gray-100 hover:border-rose-100 rounded-sm transition-all">
+                                    <HiOutlineTrash size={20}/>
+                                </button>
                             </div>
                         </header>
-                         <div className="p-10 prose prose-sm max-w-none">
-                            <p>{selectedMessage.message}</p>
+
+                        <div className="p-8 md:p-20 max-w-4xl">
+                            <div className="relative">
+                                <div className="absolute -left-10 top-0 h-full w-[2px] bg-gray-50"></div>
+                                <span className="text-[9px] font-black uppercase tracking-[0.8em] text-gray-200 block mb-10 italic">Narrative Body</span>
+                                <div className="text-sm md:text-lg leading-[2] text-gray-600 font-medium italic first-letter:text-5xl first-letter:font-black first-letter:mr-3 first-letter:float-left first-letter:text-black">
+                                    {selectedMessage.message}
+                                </div>
+                            </div>
+
+                            {/* Response Actions Hub */}
+                            <div className="mt-20 pt-20 border-t border-gray-50">
+                                <a 
+                                    href={`mailto:${selectedMessage.email}?subject=Re: ${selectedMessage.subject}`}
+                                    className="group relative inline-block px-16 py-7 bg-black text-white text-[10px] font-black uppercase tracking-[0.5em] overflow-hidden shadow-2xl transition-all active:scale-95"
+                                >
+                                    <span className="relative z-10 italic">Initiate Response</span>
+                                    <div className="absolute inset-0 bg-neutral-800 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center">
-                        <HiOutlineChatAlt2 size={48} className="mx-auto text-gray-300"/>
-                        <p className="mt-4 text-sm text-gray-500">Select a message to view details</p>
+                    <div className="text-center space-y-8 animate-pulse">
+                        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto border border-gray-100">
+                             <HiOutlineChatAlt2 size={40} className="text-gray-200"/>
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-300 italic">Select Communication</h3>
+                            <p className="text-[9px] font-bold text-gray-200 uppercase tracking-widest leading-none">Transmission Ledger Pending</p>
+                        </div>
                     </div>
                 )}
             </div>
-        </div>
+        </main>
     );
 }
