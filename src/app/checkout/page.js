@@ -11,10 +11,10 @@ const districts = [
     'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogura', 'Brahmanbaria', 'Chandpur', 'Chapainawabganj', 'Chattogram', 
     'Chuadanga', 'Cumilla', 'Cox\'s Bazar', 'Dinajpur', 'Faridpur', 'Feni', 'Gaibandha', 'Gazipur', 'Gopalganj', 'Habiganj', 
     'Jamalpur', 'Jashore', 'Jhalokati', 'Jhenaidah', 'Joypurhat', 'Khagrachhari', 'Khulna', 'Kishoreganj', 'Kurigram', 'Kushtia', 
-    'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 'Moulvibazar', 'Munshiganj', 'Mymensingh', 'Naogaon', 
+    'Lakshmipur', 'Lalmonirhat', 'Madaripur', 'Magura', 'Manikganj', 'Meherpur', 'Moulvibazar', 'Munshiganj', 'Mymensingh', 'Naogaon', 
     'Narail', 'Narayanganj', 'Narsingdi', 'Natore', 'Netrokona', 'Nilphamari', 'Noakhali', 'Pabna', 'Panchagarh', 'Patuakhali', 
     'Pirojpur', 'Rajbari', 'Rajshahi', 'Rangamati', 'Rangpur', 'Satkhira', 'Shariatpur', 'Sherpur', 'Sirajganj', 'Sunamganj', 
-    'Sylhet', 'Tangail', 'Thakurgaon'
+    'Sylhet', 'Tangail', 'Thakurgaon', 'Narsingdi' 
 ];
 
 export default function CheckoutPage() {
@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   
   // ডাইনামিক সেটিংস স্টেট
   const [siteSettings, setSiteSettings] = useState({
-      shippingFeeDhaka: 60,
+      shippingFeeDhaka: 120,
       shippingFeeOutside: 120,
       bkashNumber: '01XXXXXXXXX',
       nagadNumber: '01XXXXXXXXX'
@@ -56,7 +56,7 @@ export default function CheckoutPage() {
       if (doc.exists()) {
           const data = doc.data();
           setSiteSettings({
-              shippingFeeDhaka: Number(data.shippingFee) || 60,
+              shippingFeeDhaka: Number(data.shippingFee) || 120,
               shippingFeeOutside: Number(data.shippingFeeOutside) || 120,
               bkashNumber: data.bkashNumber || '01XXXXXXXXX',
               nagadNumber: data.nagadNumber || '01XXXXXXXXX'
