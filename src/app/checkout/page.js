@@ -238,7 +238,7 @@ export default function CheckoutPage() {
                        <div className="space-y-4">
                           <span className="text-[9px] font-black uppercase tracking-[0.5em] text-gray-400 italic">Financial Instruction</span>
                           <p className="text-[14px] font-bold leading-relaxed max-w-sm tracking-tighter italic uppercase">
-                            Transfer exactly <span className="text-3xl font-black italic underline decoration-gray-100 underline-offset-8">\u09F3{total.toFixed(0)}</span> to our secure wallet.
+                            Transfer exactly <span className="text-3xl font-black italic underline decoration-gray-100 underline-offset-8">&#2547; {total.toFixed(0)}</span> to our secure wallet.
                           </p>
                        </div>
                        <div className="bg-gray-50 px-10 py-6 rounded-sm border border-gray-100 flex items-center gap-10">
@@ -268,15 +268,15 @@ export default function CheckoutPage() {
             <div className="sticky top-32 bg-white p-12 md:p-16 rounded-sm border border-gray-50 shadow-[0_40px_100px_rgba(0,0,0,0.02)]">
               <h2 className="text-[11px] font-black uppercase tracking-[0.8em] mb-16 text-gray-300 italic text-center">Final Audit Log</h2>
               <div className="space-y-10">
-                <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic"><span>Articles Value</span><span className="text-black">\u09F3{subtotal.toLocaleString()}</span></div>
-                {discount > 0 && (<div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-emerald-600 italic"><span>Voucher Credit</span><span>- \u09F3{discount.toLocaleString()}</span></div>)}
-                <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic"><span>Logistics Fee</span><span className="text-black">\u09F3{currentShippingFee}</span></div>
+                <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic"><span>Articles Value</span><span className="text-black">&#2547;{subtotal.toLocaleString()}</span></div>
+                {discount > 0 && (<div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-emerald-600 italic"><span>Voucher Credit</span><span>- &#2547;{discount.toLocaleString()}</span></div>)}
+                <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-gray-400 italic"><span>Logistics Fee</span><span className="text-black">&#2547;{currentShippingFee}</span></div>
                 
                 <div className="pt-16 border-t border-gray-50 mt-16">
                    <div className="flex flex-col gap-10">
                       <div className="flex justify-between items-baseline mb-8">
                         <span className="text-[12px] font-black uppercase tracking-[0.8em] italic">Total Payable</span>
-                        <span className="text-5xl font-black tracking-tighter italic leading-none">\u09F3{total.toLocaleString()}</span>
+                        <span className="text-5xl font-black tracking-tighter italic leading-none">&#2547;{total.toLocaleString()}</span>
                       </div>
                       
                       <div className="flex bg-gray-50 rounded-sm overflow-hidden border border-gray-100 p-2 group transition-all focus-within:border-black">
