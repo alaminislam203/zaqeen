@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { generateInvoice } from '@/lib/generateInvoice';
-import { HiOutlineDownload, HiOutlineArrowNarrowLeft, HiOutlineCheckCircle, HiOutlineClock } from 'react-icons/hi';
+import { HiOutlineDownload, HiOutlineArrowNarrowLeft, HiOutlineClock } from 'react-icons/hi';
 import { RiShieldCheckLine, RiWhatsappLine } from 'react-icons/ri';
 
 export default function OrderConfirmationPage() {
@@ -13,10 +13,12 @@ export default function OrderConfirmationPage() {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [supportNumber, setSupportNumber] = useState('88017XXXXXXXX'); // Default
 
     useEffect(() => {
         if (!orderId) return;
 
+        // ১. অর্ডারের ডাটা ফেচিং
         const fetchOrder = async () => {
             try {
                 const docRef = doc(db, 'orders', orderId);
@@ -35,101 +37,113 @@ export default function OrderConfirmationPage() {
         };
 
         fetchOrder();
+
+        // ২. ডাইনামিক সাপোর্ট নম্বর ফেচিং (Settings থেকে)
+        const unsubSettings = onSnapshot(doc(db, "settings", "site_config"), (doc) => {
+            if (doc.exists()) setSupportNumber(doc.data().supportPhone || '88017XXXXXXXX');
+        });
+
+        return () => unsubSettings();
     }, [orderId]);
 
-    // হোয়াটসঅ্যাপ মেসেজ লিংক (অর্ডার আপডেট দ্রুত পাওয়ার জন্য)
-    const whatsappLink = order ? `https://wa.me/88017XXXXXXXX?text=Hello Zaqeen, I just secured an acquisition! Reference ID: #${order.orderId}` : '#';
+    // ডাইনামিক হোয়াটসঅ্যাপ লিঙ্ক
+    const whatsappLink = order 
+        ? `https://wa.me/${supportNumber.replace('+', '')}?text=Greetings Zaqeen, I have secured an acquisition. Reference: #${order.orderId}` 
+        : '#';
 
     if (loading) return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-          <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin mb-6"></div>
-          <p className="uppercase tracking-[0.5em] text-[10px] font-black italic">Archiving Your Acquisition</p>
+          <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mb-6"></div>
+          <p className="uppercase tracking-[0.6em] text-[9px] font-black italic text-gray-400">Archiving Acquisition...</p>
         </div>
     );
 
     if (error) return (
-        <div className="min-h-screen flex flex-col items-center justify-center text-rose-500 space-y-4">
-            <h2 className="text-sm font-black uppercase tracking-widest">{error}</h2>
-            <Link href="/shop" className="text-[10px] underline uppercase tracking-widest">Back to Gallery</Link>
+        <div className="min-h-screen flex flex-col items-center justify-center text-rose-500 space-y-6">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] italic">{error}</h2>
+            <Link href="/shop" className="text-[9px] border-b border-rose-200 pb-1 uppercase tracking-widest font-bold">Return to Gallery</Link>
         </div>
     );
 
     return (
         <main className="min-h-screen bg-[#FDFDFD] selection:bg-black selection:text-white">
-            <div className="max-w-4xl mx-auto px-6 py-16 md:py-32 animate-fadeIn">
+            <div className="max-w-5xl mx-auto px-6 py-20 md:py-32 animate-fadeIn">
 
-                <div className="bg-white border border-gray-50 shadow-[0_40px_100px_rgba(0,0,0,0.03)] rounded-sm p-10 md:p-20 relative overflow-hidden">
-                    <div className="absolute -top-10 -right-10 opacity-[0.02] text-9xl font-black italic select-none">ZAQEEN</div>
+                <div className="bg-white border border-gray-50 shadow-[0_60px_120px_rgba(0,0,0,0.02)] rounded-sm p-10 md:p-24 relative overflow-hidden">
+                    {/* Background Aesthetic Watermark */}
+                    <div className="absolute -top-16 -right-16 opacity-[0.03] text-[12rem] font-black italic select-none pointer-events-none">
+                        ZQ
+                    </div>
 
                     <div className="relative z-10 text-center">
-                        <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-50 rounded-full mb-8">
-                            <RiShieldCheckLine className="w-10 h-10 text-emerald-500 animate-pulse"/>
+                        <div className="inline-flex items-center justify-center w-24 h-24 bg-black text-white rounded-full mb-10 shadow-2xl">
+                            <RiShieldCheckLine className="w-10 h-10 animate-pulse text-emerald-400"/>
                         </div>
-                        <span className="block text-[10px] uppercase tracking-[0.5em] text-gray-400 font-bold mb-3 italic">Verified Acquisition</span>
-                        <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-gray-900 italic leading-none">Curation Logged</h1>
-                        <p className="text-[11px] text-gray-400 font-medium mt-6 tracking-widest leading-relaxed max-w-sm mx-auto">
-                            Gratitude for your belief in Zaqeen, <span className="text-black font-black uppercase">{order.deliveryInfo?.name || 'Collector'}</span>. Your articles are currently undergoing audit-ready protocols.
+                        <span className="block text-[10px] uppercase tracking-[0.8em] text-gray-300 font-black mb-4 italic">Identity Verified</span>
+                        <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter text-black italic leading-[0.8]">Acquisition Logged</h1>
+                        
+                        <div className="w-12 h-[2px] bg-black mx-auto mt-12 mb-10"></div>
+                        
+                        <p className="text-[12px] text-gray-400 font-bold mt-6 tracking-widest leading-relaxed max-w-md mx-auto uppercase italic">
+                            Gratitude, <span className="text-black">{order.deliveryInfo?.name || 'Collector'}</span>. Your articles have been entered into the Zaqeen archive for immediate audit.
                         </p>
                     </div>
 
-                    {/* Order Meta Data */}
-                    <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-10 py-12 border-t border-b border-gray-50">
-                        <div className="text-center md:text-left">
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 mb-2 italic">Ref. Identity</p>
-                            <p className="text-sm font-black tracking-widest text-gray-900">#{order.orderId}</p>
+                    {/* Order Audit Ledger */}
+                    <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-12 py-16 border-t border-b border-gray-50">
+                        <div className="text-center md:text-left space-y-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-300 italic">Reference Key</p>
+                            <p className="text-sm font-black tracking-[0.2em] text-black">#{order.orderId}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 mb-2 italic">Date Logged</p>
-                            <p className="text-sm font-black tracking-widest text-gray-900">
-                                {order.timestamp?.toDate ? new Date(order.timestamp.toDate()).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : 'Processing'}
+                        <div className="text-center space-y-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-300 italic">Temporal Log</p>
+                            <p className="text-sm font-black tracking-[0.2em] text-black uppercase">
+                                {order.timestamp?.toDate ? new Date(order.timestamp.toDate()).toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'}) : 'Real-time Syncing'}
                             </p>
                         </div>
-                        <div className="text-center md:text-right">
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400 mb-2 italic">Payment Status</p>
-                            <p className={`text-sm font-black tracking-widest uppercase ${order.paymentInfo?.status === 'Unpaid' ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                {order.paymentInfo?.status || 'Pending'}
+                        <div className="text-center md:text-right space-y-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-300 italic">Security Status</p>
+                            <p className={`text-sm font-black tracking-[0.2em] uppercase italic ${order.paymentInfo?.status === 'Unpaid' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {order.paymentInfo?.status || 'Awaiting Verified'}
                             </p>
                         </div>
                     </div>
 
-                    {/* Delivery Timeline Image/Diagram Placeholder */}
-                    <div className="mt-12">
-                        
-                    </div>
-
-                    {/* Logistic Notification */}
-                    <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-6 bg-gray-50/50 p-8 border border-gray-50">
-                        <div className="flex items-center gap-4">
-                            <HiOutlineClock className="text-gray-400 w-5 h-5" />
-                            <p className="text-[9px] uppercase tracking-widest font-black text-gray-500">Logistics dispatch within 24-48 business hours.</p>
+                    {/* Logistics Hub Interaction */}
+                    <div className="mt-12 flex flex-col lg:flex-row items-center justify-between gap-8 bg-[#fcfcfc] p-8 md:p-10 border border-gray-50 group">
+                        <div className="flex items-center gap-6">
+                            <HiOutlineClock className="text-gray-200 w-6 h-6 group-hover:text-black transition-colors" />
+                            <p className="text-[9px] uppercase tracking-[0.3em] font-black text-gray-400 italic leading-relaxed">
+                                Logistics Dispatch Protocol: <br/> 24-48 Business Hours Verification.
+                            </p>
                         </div>
-                        <a href={whatsappLink} target="_blank" className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors">
-                            <RiWhatsappLine size={16}/> Connect to Concierge
+                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-black border-b border-black pb-1 hover:text-gray-400 hover:border-gray-200 transition-all italic">
+                            <RiWhatsappLine className="text-emerald-500" size={18}/> Access Concierge
                         </a>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="mt-16 flex flex-col md:flex-row items-center justify-center gap-6">
-                        <Link href="/shop" className="w-full md:w-auto px-12 py-5 border border-gray-100 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-gray-50 transition-all text-center">
-                            Discover More
+                    {/* Final Actions */}
+                    <div className="mt-20 flex flex-col md:flex-row items-center justify-center gap-8">
+                        <Link href="/shop" className="w-full md:w-auto px-16 py-6 border border-gray-100 text-[10px] font-black uppercase tracking-[0.5em] hover:bg-black hover:text-white transition-all text-center italic">
+                            Explore New Blueprints
                         </Link>
                         <button 
                             onClick={() => order && generateInvoice(order)} 
-                            className="group relative w-full md:w-auto bg-black text-white px-12 py-5 overflow-hidden shadow-2xl transition-all"
+                            className="group relative w-full md:w-auto bg-black text-white px-16 py-6 overflow-hidden shadow-2xl transition-all active:scale-95"
                         >
-                            <span className="relative z-10 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.4em]">
-                                <HiOutlineDownload size={18} /> Download INVOICE
+                            <span className="relative z-10 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-[0.5em] italic">
+                                <HiOutlineDownload size={20} /> Archive Invoice
                             </span>
-                            <div className="absolute inset-0 bg-neutral-900 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+                            <div className="absolute inset-0 bg-neutral-800 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                         </button>
                     </div>
                 </div>
 
-                {/* Footer Navigation */}
-                <div className="mt-16 flex justify-center">
-                    <Link href="/account" className="group flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 hover:text-black transition-all">
-                        <HiOutlineArrowNarrowLeft className="text-lg transition-transform group-hover:-translate-x-2" />
-                        Access Your Portfolio
+                {/* Return Path */}
+                <div className="mt-20 flex justify-center">
+                    <Link href="/account" className="group flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.5em] text-gray-300 hover:text-black transition-all italic">
+                        <HiOutlineArrowNarrowLeft className="text-xl transition-transform group-hover:-translate-x-3" />
+                        Access Identity Portfolio
                     </Link>
                 </div>
             </div>
