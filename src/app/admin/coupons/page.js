@@ -9,10 +9,16 @@ export default function CouponAdmin() {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [mounted, setMounted] = useState(false); // Hydration ফিক্সের জন্য
+
   const [newCoupon, setNewCoupon] = useState({ 
     code: '', type: 'percentage', value: '', minSpend: '', usageLimit: '', expiryDate: '', active: true 
   });
+
+  // ১. মাউন্ট চেক (Hydration Mismatch দূর করতে)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'coupons'), (snapshot) => {
@@ -21,6 +27,11 @@ export default function CouponAdmin() {
     });
     return () => unsub();
   }, []);
+
+  const isExpired = (expiryDate) => {
+    if (!expiryDate) return false;
+    return new Date(expiryDate) < new Date();
+  };
 
   const handleAddCoupon = async (e) => {
     e.preventDefault();
@@ -50,7 +61,7 @@ export default function CouponAdmin() {
     try {
       const couponRef = doc(db, 'coupons', id);
       await updateDoc(couponRef, { active: !active });
-      toast.success(`Coupon ${!active ? 'activated' : 'inhibited'}.`);
+      toast.success(`Protocol ${!active ? 'Activated' : 'Inhibited'}`);
     } catch (error) {
       toast.error('System Error.');
     }
@@ -67,13 +78,14 @@ export default function CouponAdmin() {
     }
   };
 
-  const isExpired = (expiryDate) => expiryDate && new Date(expiryDate) < new Date();
+  // যদি কম্পোনেন্ট মাউন্ট না হয়, তবে কিছু দেখাবে না (Hydration Safety)
+  if (!mounted) return null;
 
   return (
     <main className="min-h-screen bg-[#FDFDFD] p-6 md:p-12 selection:bg-black selection:text-white">
       <div className="max-w-[1440px] mx-auto">
         
-        {/* --- Section: Header Hub --- */}
+        {/* Header Section */}
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-16 gap-10 border-b border-gray-50 pb-12">
           <div className="space-y-4">
             <span className="text-[10px] uppercase tracking-[0.8em] text-gray-300 font-black italic block">Marketing Suite</span>
@@ -90,7 +102,7 @@ export default function CouponAdmin() {
           </button>
         </header>
 
-        {/* --- Section: Analytics Architecture --- */}
+        {/* Analytics Architecture */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-20">
           <div className="bg-white p-10 border border-gray-50 rounded-sm shadow-[0_20px_50px_rgba(0,0,0,0.02)] flex justify-between items-center group">
             <div className="space-y-3">
@@ -104,7 +116,7 @@ export default function CouponAdmin() {
              <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:scale-110 transition-transform duration-[2s]"><HiTicket className="w-48 h-48" /></div>
              <div className="relative z-10 space-y-3">
                 <p className="text-[9px] uppercase tracking-[0.5em] text-gray-500 font-black italic">Incentive Strategy</p>
-                <h2 className="text-2xl font-black tracking-widest uppercase italic leading-none">Global <br/> Reach-Out</h2>
+                <h2 className="text-2xl font-black tracking-widest uppercase italic leading-none">Zaqeen <br/> Rewards</h2>
              </div>
           </div>
 
@@ -117,7 +129,7 @@ export default function CouponAdmin() {
           </div>
         </div>
 
-        {/* --- Section: Data Matrix (Table) --- */}
+        {/* Data Table */}
         <div className="bg-white border border-gray-50 shadow-[0_40px_100px_rgba(0,0,0,0.02)] rounded-sm overflow-hidden animate-fadeIn">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[1000px]">
@@ -126,15 +138,13 @@ export default function CouponAdmin() {
                   <th className="p-8">Identity Key</th>
                   <th className="p-8 text-center">Structure</th>
                   <th className="p-8 text-center">Operational Limits</th>
-                  <th className="p-8 text-center">Status protocol</th>
+                  <th className="p-8 text-center">Status Protocol</th>
                   <th className="p-8 text-right">Audit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   <tr><td colSpan="5" className="p-24 text-center"><div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto"></div></td></tr>
-                ) : coupons.length === 0 ? (
-                  <tr><td colSpan="5" className="p-24 text-center text-[10px] uppercase tracking-[0.5em] text-gray-300 font-black italic">Archive Void</td></tr>
                 ) : coupons.map(c => {
                   const expired = isExpired(c.expiryDate);
                   return (
@@ -155,14 +165,14 @@ export default function CouponAdmin() {
                       </td>
                       <td className="p-8 text-center">
                         <div className="space-y-2">
-                           <span className="text-[9px] font-black uppercase text-gray-300 tracking-[0.3em] block">Investment Threshold</span>
+                           <span className="text-[9px] font-black uppercase text-gray-300 tracking-[0.3em] block">Threshold</span>
                            <span className="text-sm font-black tracking-tight text-black italic">৳{c.minSpend || 0}</span>
                         </div>
                       </td>
                       <td className="p-8 text-center">
                         <div className="space-y-2">
-                           <span className="text-[9px] font-black uppercase text-gray-300 tracking-[0.3em] block">Usage Velocity</span>
-                           <span className="text-sm font-black tracking-tight text-black italic">{c.usedCount} / {c.usageLimit || '∞'}</span>
+                           <span className="text-[9px] font-black uppercase text-gray-300 tracking-[0.3em] block">Used Velocity</span>
+                           <span className="text-sm font-black tracking-tight text-black italic">{c.usedCount || 0} / {c.usageLimit || '∞'}</span>
                         </div>
                       </td>
                       <td className="p-8 text-center">
@@ -170,31 +180,24 @@ export default function CouponAdmin() {
                            <span className={`text-[9px] font-black px-4 py-1.5 uppercase tracking-widest border italic rounded-sm transition-all
                              ${!c.active ? 'border-rose-100 text-rose-500 bg-rose-50' : 
                                expired ? 'border-amber-100 text-amber-500 bg-amber-50' : 
-                               'border-emerald-100 text-emerald-500 bg-emerald-50 shadow-[0_5px_15px_rgba(16,185,129,0.1)]'
+                               'border-emerald-100 text-emerald-500 bg-emerald-50'
                              }`}>
                              {!c.active ? 'Inhibited' : expired ? 'Protocol Expired' : 'Operational'}
                            </span>
                            {c.expiryDate && (
                              <div className="flex items-center gap-2 text-[10px] font-bold text-gray-300 italic">
-                               <HiOutlineClock className="w-3 h-3" /> {new Date(c.expiryDate).toLocaleDateString('en-GB', {day:'2-digit', month:'short'})}
+                               <HiOutlineClock className="w-3 h-3" /> {new Date(c.expiryDate).toLocaleDateString('en-GB')}
                              </div>
                            )}
                         </div>
                       </td>
                       <td className="p-8 text-right">
                         <div className="flex justify-end gap-3">
-                          <button 
-                            onClick={() => toggleCouponStatus(c.id, c.active)} 
-                            title={c.active ? 'Inhibit' : 'Activate'}
-                            className={`p-4 rounded-sm transition-all duration-500 ${c.active ? 'bg-gray-50 text-gray-300 hover:bg-amber-500 hover:text-white shadow-sm' : 'bg-gray-50 text-emerald-500 hover:bg-emerald-500 hover:text-white shadow-sm'}`}
-                          >
+                          <button onClick={() => toggleCouponStatus(c.id, c.active)} className={`p-4 rounded-sm transition-all duration-500 ${c.active ? 'bg-gray-50 text-gray-300 hover:bg-amber-500 hover:text-white' : 'bg-gray-50 text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}>
                             {c.active ? <HiOutlineBan size={18} /> : <HiCheckCircle size={18} />}
                           </button>
-                          <button 
-                            onClick={() => deleteCoupon(c.id)} 
-                            className="p-4 bg-gray-50 text-gray-200 rounded-sm hover:bg-black hover:text-white transition-all duration-500 shadow-sm"
-                          >
-                            <HiOutlineTrash size={18} />
+                          <button onClick={() => deleteCoupon(c.id)} className="p-4 bg-gray-50 text-gray-200 rounded-sm hover:bg-black hover:text-white transition-all duration-500 shadow-sm">
+                            <HiX size={18} />
                           </button>
                         </div>
                       </td>
@@ -206,55 +209,33 @@ export default function CouponAdmin() {
           </div>
         </div>
 
-        {/* --- Modal Architecture --- */}
+        {/* Modal Logic */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-[999] p-6 overflow-y-auto">
             <div className="bg-white w-full max-w-xl relative p-12 md:p-16 animate-slideUp rounded-sm border border-gray-100">
               <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 text-gray-300 hover:text-black transition-colors"><HiX size={26} /></button>
-              
               <header className="mb-12 space-y-3">
-                <span className="text-[10px] font-black uppercase tracking-[0.8em] text-gray-300 italic block">New Reward Protocol</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.8em] text-gray-300 italic block">New Protocol</span>
                 <h2 className="text-3xl font-black uppercase tracking-tighter italic leading-none">Draft Incentive</h2>
               </header>
-              
               <form onSubmit={handleAddCoupon} className="space-y-12">
                 <div className="space-y-4">
-                  <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic ml-1">Voucher Identifier (Code)</label>
-                  <input 
-                    type="text" 
-                    value={newCoupon.code} 
-                    onChange={e => setNewCoupon({...newCoupon, code: e.target.value})} 
-                    placeholder="E.G. ZAQEEN_WINTER_2026" 
-                    className="w-full bg-[#fcfcfc] border border-gray-100 p-6 text-sm font-black tracking-[0.4em] outline-none focus:border-black transition-all uppercase italic" 
-                    required 
-                  />
+                  <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic ml-1">Voucher Key (Code)</label>
+                  <input type="text" value={newCoupon.code} onChange={e => setNewCoupon({...newCoupon, code: e.target.value})} placeholder="E.G. WINTER_26" className="w-full bg-[#fcfcfc] border border-gray-100 p-6 text-sm font-black tracking-[0.4em] outline-none focus:border-black transition-all uppercase italic" required />
                 </div>
-
                 <div className="grid grid-cols-2 gap-10">
                   <div className="space-y-4">
-                    <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Financial Structure</label>
+                    <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Structure</label>
                     <select value={newCoupon.type} onChange={e => setNewCoupon({...newCoupon, type: e.target.value})} className="w-full bg-white border border-gray-100 p-6 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer focus:border-black italic">
                       <option value="percentage">Percentage (%)</option>
-                      <option value="fixed">Flat Rate (৳)</option>
+                      <option value="fixed">Flat (৳)</option>
                     </select>
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Reward Value</label>
-                    <input type="number" value={newCoupon.value} onChange={e => setNewCoupon({...newCoupon, value: e.target.value})} className="w-full bg-[#fcfcfc] border border-gray-100 p-6 text-xl font-black outline-none focus:border-black italic" placeholder="VALUE" required />
+                    <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Value</label>
+                    <input type="number" value={newCoupon.value} onChange={e => setNewCoupon({...newCoupon, value: e.target.value})} className="w-full bg-[#fcfcfc] border border-gray-100 p-6 text-xl font-black outline-none focus:border-black italic" required />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-10">
-                  <div className="space-y-4">
-                    <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Minimum Spend (৳)</label>
-                    <input type="number" value={newCoupon.minSpend} onChange={e => setNewCoupon({...newCoupon, minSpend: e.target.value})} className="w-full bg-[#fcfcfc] border border-gray-100 p-6 text-xl font-black outline-none focus:border-black italic" placeholder="0" />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Expiry Temporal Point</label>
-                    <input type="date" value={newCoupon.expiryDate} onChange={e => setNewCoupon({...newCoupon, expiryDate: e.target.value})} className="w-full bg-white border border-gray-100 p-6 text-[11px] font-black uppercase tracking-widest outline-none cursor-pointer focus:border-black italic" />
-                  </div>
-                </div>
-
                 <button type="submit" className="group relative w-full bg-black text-white py-8 text-[11px] font-black uppercase tracking-[0.6em] shadow-2xl overflow-hidden transition-all active:scale-95 italic">
                     <span className="relative z-10">Publish Protocol</span>
                     <div className="absolute inset-0 bg-neutral-800 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
@@ -263,13 +244,6 @@ export default function CouponAdmin() {
             </div>
           </div>
         )}
-
-        {/* --- Section: Status Signature --- */}
-        <div className="mt-24 flex items-center justify-center gap-6 opacity-30 select-none pointer-events-none">
-            <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></div>
-            <p className="text-[9px] uppercase tracking-[0.6em] font-black italic">Governance Architecture 2026</p>
-            <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></div>
-        </div>
       </div>
     </main>
   );
