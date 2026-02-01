@@ -210,13 +210,26 @@ export default function ProductPage() {
         Technical Blueprint
     </span>
     
+    <div className="space-y-6">
+    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300 italic block border-b border-gray-50 pb-3">
+        Technical Blueprint
+    </span>
+    
     <div 
-        className="text-[13px] leading-[2] text-gray-500 font-medium italic max-w-md uppercase tracking-tight 
-                   /* HTML Markdown Styling */
-                   prose-p:mb-4 
-                   prose-strong:text-black prose-strong:font-black prose-strong:not-italic
-                   prose-ul:list-none prose-ul:space-y-2 prose-ul:mb-4
-                   prose-li:border-l prose-li:border-gray-100 prose-li:pl-4 prose-li:transition-all hover:prose-li:border-black"
+        className="prose prose-sm max-w-md
+                   /* Typography Basics */
+                   text-[13px] leading-[2.2] text-gray-500 font-medium uppercase tracking-tight 
+                   
+                   /* Paragraph Styling */
+                   prose-p:mb-6 prose-p:leading-relaxed
+                   
+                   /* Strong/Bold Styling */
+                   prose-strong:text-black prose-strong:font-black prose-strong:not-italic prose-strong:tracking-widest
+                   
+                   /* List/Bullet Architecture */
+                   prose-ul:list-none prose-ul:pl-0 prose-ul:space-y-3
+                   prose-li:border-l prose-li:border-gray-100 prose-li:pl-5 prose-li:transition-all 
+                   hover:prose-li:border-black hover:prose-li:text-black"
         dangerouslySetInnerHTML={{ __html: product.description }} 
     />
 </div>
