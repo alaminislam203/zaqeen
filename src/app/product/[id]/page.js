@@ -63,7 +63,6 @@ export default function ProductPage() {
   }, []);
 
   const fetchSalesCount = useCallback(async (productId) => {
-    // নোট: লার্জ স্কেলে এটি Cloud Function দিয়ে করা ভালো, তবে এখানে সিম্পল রাখা হয়েছে
     const ordersQuery = query(collection(db, 'orders'), limit(50));
     const querySnapshot = await getDocs(ordersQuery);
     let count = 0;
@@ -73,7 +72,7 @@ export default function ProductPage() {
             if(item.id === productId) count += item.quantity;
         });
     });
-    setSalesCount(count || Math.floor(Math.random() * 20) + 5); // ডেমো ডাটা যদি রিয়েল না থাকে
+    setSalesCount(count || Math.floor(Math.random() * 20) + 5);
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -206,33 +205,20 @@ export default function ProductPage() {
 
             {/* Description Protocol */}
             <div className="space-y-6">
-    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic block border-b border-gray-50 pb-2">
-        Technical Blueprint
-    </span>
-    
-    <div className="space-y-6">
-    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300 italic block border-b border-gray-50 pb-3">
-        Technical Blueprint
-    </span>
-    
-    <div 
-        className="prose prose-sm max-w-md
-                   /* Typography Basics */
-                   text-[13px] leading-[2.2] text-gray-500 font-medium uppercase tracking-tight 
-                   
-                   /* Paragraph Styling */
-                   prose-p:mb-6 prose-p:leading-relaxed
-                   
-                   /* Strong/Bold Styling */
-                   prose-strong:text-black prose-strong:font-black prose-strong:not-italic prose-strong:tracking-widest
-                   
-                   /* List/Bullet Architecture */
-                   prose-ul:list-none prose-ul:pl-0 prose-ul:space-y-3
-                   prose-li:border-l prose-li:border-gray-100 prose-li:pl-5 prose-li:transition-all 
-                   hover:prose-li:border-black hover:prose-li:text-black"
-        dangerouslySetInnerHTML={{ __html: product.description }} 
-    />
-</div>
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300 italic block border-b border-gray-50 pb-3">
+                  Technical Blueprint
+              </span>
+              
+              <div 
+                  className="prose prose-sm max-w-md text-[13px] leading-[2.2] text-gray-500 font-medium uppercase tracking-tight 
+                             prose-p:mb-6 prose-p:leading-relaxed
+                             prose-strong:text-black prose-strong:font-black prose-strong:not-italic prose-strong:tracking-widest
+                             prose-ul:list-none prose-ul:pl-0 prose-ul:space-y-3
+                             prose-li:border-l prose-li:border-gray-100 prose-li:pl-5 prose-li:transition-all 
+                             hover:prose-li:border-black hover:prose-li:text-black"
+                  dangerouslySetInnerHTML={{ __html: product.description }} 
+              />
+            </div>
 
             {/* Size Selector */}
             {sizes.length > 0 && (
@@ -341,4 +327,4 @@ export default function ProductPage() {
       )}
     </main>
   );
-
+}
