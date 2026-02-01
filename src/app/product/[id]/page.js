@@ -205,10 +205,21 @@ export default function ProductPage() {
             </div>
 
             {/* Description Protocol */}
-            <div className="space-y-4">
-               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 italic">Technical Blueprint</span>
-               <div className="text-[13px] leading-[1.8] text-gray-500 font-medium italic max-w-md uppercase tracking-tight" dangerouslySetInnerHTML={{ __html: product.description }} />
-            </div>
+            <div className="space-y-6">
+    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 italic block border-b border-gray-50 pb-2">
+        Technical Blueprint
+    </span>
+    
+    <div 
+        className="text-[13px] leading-[2] text-gray-500 font-medium italic max-w-md uppercase tracking-tight 
+                   /* HTML Markdown Styling */
+                   prose-p:mb-4 
+                   prose-strong:text-black prose-strong:font-black prose-strong:not-italic
+                   prose-ul:list-none prose-ul:space-y-2 prose-ul:mb-4
+                   prose-li:border-l prose-li:border-gray-100 prose-li:pl-4 prose-li:transition-all hover:prose-li:border-black"
+        dangerouslySetInnerHTML={{ __html: product.description }} 
+    />
+</div>
 
             {/* Size Selector */}
             {sizes.length > 0 && (
