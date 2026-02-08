@@ -33,77 +33,6 @@ const ProductPageSkeleton = () => (
   </div>
 );
 
-const ALLOWED_TAGS = new Set([
-  'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's',
-  'ul', 'ol', 'li', 'blockquote',
-  'h1', 'h2', 'h3', 'h4',
-  'span', 'div', 'a', 'img',
-  'table', 'thead', 'tbody', 'tr', 'th', 'td'
-]);
-
-const ALLOWED_ATTRS = {
-  a: new Set(['href', 'target', 'rel', 'title']),
-  img: new Set(['src', 'alt', 'title'])
-};
-
-const escapeHtml = (text) =>
-  String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const sanitizeHtml = (rawHtml) => {
-  if (!rawHtml || typeof rawHtml !== 'string') return '';
-  if (typeof window === 'undefined' || !window.DOMParser) return escapeHtml(rawHtml);
-
-  const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT);
-  const nodesToRemove = [];
-
-  while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const tag = node.tagName?.toLowerCase?.() || '';
-
-    if (!ALLOWED_TAGS.has(tag)) {
-      nodesToRemove.push(node);
-      continue;
-    }
-
-    const allowed = ALLOWED_ATTRS[tag] || new Set();
-    [...node.attributes].forEach((attr) => {
-      const name = attr.name.toLowerCase();
-      const value = attr.value || '';
-
-      if (!allowed.has(name) || name.startsWith('on') || /javascript:/i.test(value)) {
-        node.removeAttribute(attr.name);
-        return;
-      }
-    });
-
-    if (tag === 'a') {
-      const href = node.getAttribute('href') || '';
-      if (!/^https?:\/\//i.test(href) && !href.startsWith('/')) {
-        node.removeAttribute('href');
-      }
-      if (node.getAttribute('target') === '_blank') {
-        node.setAttribute('rel', 'noopener noreferrer');
-      }
-    }
-  }
-
-  nodesToRemove.forEach((node) => node.replaceWith(doc.createTextNode(node.textContent || '')));
-  return doc.body.innerHTML;
-};
-
-const formatDescription = (description) => {
-  if (!description) return '';
-  const hasTags = /<\/?[a-z][\s\S]*>/i.test(description);
-  if (hasTags) return sanitizeHtml(description);
-  return escapeHtml(description).replace(/\n/g, '<br />');
-};
-
 export default function ProductPage() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -118,7 +47,6 @@ export default function ProductPage() {
   const [activeMedia, setActiveMedia] = useState({ type: 'image', url: '', index: 0 });
   const [activeTab, setActiveTab] = useState('description');
   const [imageLoading, setImageLoading] = useState(true);
-  const [selectedColor, setSelectedColor] = useState(null);
 
   const { dispatch: cartDispatch } = useCart();
   const { state: wishlistState, dispatch: wishlistDispatch } = useWishlist();
@@ -148,11 +76,7 @@ export default function ProductPage() {
 
   // Fetch sales count
   const fetchSalesCount = useCallback(async (productId) => {
-<<<<<<< HEAD
-    const ordersQuery = query(collection(db, 'orders'), limit(50));
-=======
     const ordersQuery = query(collection(db, 'orders'), limit(100));
->>>>>>> e74bc1f (Initial commit)
     const querySnapshot = await getDocs(ordersQuery);
     let count = 0;
     querySnapshot.forEach(doc => {
@@ -161,11 +85,7 @@ export default function ProductPage() {
         if(item.id === productId) count += item.quantity;
       });
     });
-<<<<<<< HEAD
-    setSalesCount(count || Math.floor(Math.random() * 20) + 5);
-=======
     setSalesCount(count || Math.floor(Math.random() * 50) + 10);
->>>>>>> e74bc1f (Initial commit)
   }, []);
 
   // Main fetch function
@@ -291,11 +211,6 @@ export default function ProductPage() {
     toast.success('Link copied to clipboard');
   };
 
-  const safeDescription = useMemo(
-    () => formatDescription(product?.description || ''),
-    [product?.description]
-  );
-
   if (loading || !product) return <ProductPageSkeleton />;
 
   const discountPercentage = product.discountPrice 
@@ -308,7 +223,6 @@ export default function ProductPage() {
 
   const allMedia = [
     ...(product.videoUrl ? [{ type: 'video', url: product.videoUrl }] : []),
-    ...(selectedColor && product.colors?.find(c => c.name === selectedColor)?.images || []),
     product.imageUrl,
     ...(product.images || [])
   ].filter(Boolean);
@@ -555,23 +469,6 @@ export default function ProductPage() {
               )}
             </div>
 
-<<<<<<< HEAD
-            {/* Description Protocol */}
-            <div className="space-y-6">
-              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300 italic block border-b border-gray-50 pb-3">
-                  Technical Blueprint
-              </span>
-              
-              <div 
-                  className="prose prose-sm max-w-md text-[13px] leading-[2.2] text-gray-500 font-medium uppercase tracking-tight 
-                             prose-p:mb-6 prose-p:leading-relaxed
-                             prose-strong:text-black prose-strong:font-black prose-strong:not-italic prose-strong:tracking-widest
-                             prose-ul:list-none prose-ul:pl-0 prose-ul:space-y-3
-                             prose-li:border-l prose-li:border-gray-100 prose-li:pl-5 prose-li:transition-all 
-                             hover:prose-li:border-black hover:prose-li:text-black"
-                  dangerouslySetInnerHTML={{ __html: product.description }} 
-              />
-=======
             {/* Tabs */}
             <div className="border-b border-gray-200">
               <div className="flex gap-6">
@@ -589,7 +486,6 @@ export default function ProductPage() {
                   </button>
                 ))}
               </div>
->>>>>>> e74bc1f (Initial commit)
             </div>
 
             {/* Tab Content */}
@@ -597,7 +493,7 @@ export default function ProductPage() {
               {activeTab === 'description' && (
                 <div 
                   className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: safeDescription }}
+                  dangerouslySetInnerHTML={{ __html: product.description }}
                 />
               )}
               {activeTab === 'details' && (
@@ -640,54 +536,6 @@ export default function ProductPage() {
                 </div>
               )}
             </div>
-
-            {/* Color Selector */}
-            {product.colors && product.colors.length > 0 && (
-              <div className="space-y-4">
-                <label className="text-sm font-bold uppercase tracking-wider">
-                  Select Color
-                </label>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {product.colors.map((color, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedColor(color.name)}
-                      className={`aspect-square flex items-center justify-center text-sm font-bold uppercase rounded-xl border-2 transition-all ${
-                        selectedColor === color.name
-                          ? 'bg-black text-white border-black scale-105 shadow-lg'
-                          : 'bg-white text-gray-900 border-gray-300 hover:border-black'
-                      }`}
-                    >
-                      {color.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Color Selector */}
-            {product.colors && product.colors.length > 0 && (
-              <div className="space-y-4">
-                <label className="text-sm font-bold uppercase tracking-wider">
-                  Select Color
-                </label>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {product.colors.map((color, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedColor(color.name)}
-                      className={`aspect-square flex items-center justify-center text-sm font-bold uppercase rounded-xl border-2 transition-all ${
-                        selectedColor === color.name
-                          ? 'bg-black text-white border-black scale-105 shadow-lg'
-                          : 'bg-white text-gray-900 border-gray-300 hover:border-black'
-                      }`}
-                    >
-                      {color.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Size Selector */}
             {sizes.length > 0 && (
