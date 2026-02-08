@@ -7,6 +7,7 @@ import LiveChatWidget from '@/components/LiveChatWidget';
 import { Toaster } from 'react-hot-toast';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import MaintenanceMode from '@/components/MaintenanceMode';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -63,7 +64,9 @@ export default function RootLayout({ children }) {
               <div className="flex flex-col min-h-screen">
                 <Header />
                 <main className="flex-grow">
-                  {children}
+                  <MaintenanceMode>
+                    {children}
+                  </MaintenanceMode>
                 </main>
                 <Footer />
               </div>

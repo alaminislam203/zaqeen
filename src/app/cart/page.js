@@ -1,203 +1,386 @@
 'use client';
-import { useCart } from '@/context/CartContext'; 
+import { useCart } from '@/context/CartContext';
+import { useWishlist } from '@/context/WishlistContext';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-    HiOutlineShoppingBag, HiOutlineTrash, HiOutlinePlus, 
-    HiOutlineMinus, HiArrowNarrowRight, HiOutlineShieldCheck 
-} from 'react-icons/hi';
-import { RiSecurePaymentLine, RiTruckLine, RiExchangeLine } from 'react-icons/ri';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 export default function CartPage() {
   const { cart, dispatch, totalPrice } = useCart();
+  const { dispatch: wishlistDispatch } = useWishlist();
+  const [removingItem, setRemovingItem] = useState(null);
+  const [updatingItem, setUpdatingItem] = useState(null);
 
   const handleUpdateQuantity = (item, quantity) => {
     if (quantity < 1) {
       handleRemoveItem(item);
       return;
     }
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { ...item, quantity } });
+    
+    setUpdatingItem(item.id);
+    setTimeout(() => {
+      dispatch({ type: 'UPDATE_QUANTITY', payload: { ...item, quantity } });
+      setUpdatingItem(null);
+    }, 200);
   };
 
   const handleRemoveItem = (item) => {
-    dispatch({ type: 'REMOVE_FROM_CART', payload: item });
-    toast.error('Article removed from your portfolio', {
-        style: { borderRadius: '0px', background: '#000', color: '#fff', fontSize: '10px', letterSpacing: '0.1em' }
-    });
+    setRemovingItem(item.id);
+    setTimeout(() => {
+      dispatch({ type: 'REMOVE_FROM_CART', payload: item });
+      toast.error('Removed from cart', {
+        style: {
+          borderRadius: '8px',
+          background: '#000',
+          color: '#fff',
+          fontSize: '12px'
+        }
+      });
+      setRemovingItem(null);
+    }, 300);
   };
 
-  // লজিস্টিকস ক্যালকুলেশন
+  const moveToWishlist = (item) => {
+    wishlistDispatch({ type: 'ADD_TO_WISHLIST', payload: item });
+    dispatch({ type: 'REMOVE_FROM_CART', payload: item });
+    toast.success('Moved to wishlist', { icon: '❤️' });
+  };
+
+  const clearCart = () => {
+    if (window.confirm('Are you sure you want to clear your cart?')) {
+      dispatch({ type: 'CLEAR_CART' });
+      toast.success('Cart cleared');
+    }
+  };
+
+  // Calculations
   const shippingThreshold = 5000;
   const shippingCost = totalPrice >= shippingThreshold || totalPrice === 0 ? 0 : 150;
   const grandTotal = totalPrice + shippingCost;
   const progressToFree = Math.min((totalPrice / shippingThreshold) * 100, 100);
-
-  // কারেন্সি সিম্বল এরর এড়ানোর জন্য ইউনিকোড ব্যবহার করা হলো
-  const currency = "\u09F3"; 
+  const amountToFreeShipping = Math.max(0, shippingThreshold - totalPrice);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-black selection:bg-black selection:text-white">
-      <main className="max-w-[1440px] mx-auto px-6 lg:px-16 py-16 md:py-32">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 md:py-16">
         
-        {/* --- Header Architecture --- */}
-        <header className="mb-20 md:mb-32 border-b border-gray-50 pb-12">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="space-y-4">
-                    <span className="text-[10px] uppercase tracking-[0.8em] text-gray-300 font-black italic block">Review Selection</span>
-                    <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.8]">The Portfolio</h1>
-                </div>
-                <div className="flex items-center gap-4 bg-gray-50 px-6 py-2 rounded-full border border-gray-100">
-                    <div className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></div>
-                    <span className="text-[10px] uppercase tracking-[0.4em] font-black text-gray-500">
-                        {cart.length} {cart.length === 1 ? 'Article' : 'Articles'} Authenticated
-                    </span>
-                </div>
+        {/* Header */}
+        <header className="mb-12 pb-8 border-b border-gray-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-2">
+                Shopping Cart
+              </h1>
+              <p className="text-gray-600">
+                {cart.length} {cart.length === 1 ? 'item' : 'items'} in your cart
+              </p>
             </div>
+            
+            {cart.length > 0 && (
+              <button
+                onClick={clearCart}
+                className="text-sm font-semibold text-red-600 hover:text-red-700 underline"
+              >
+                Clear Cart
+              </button>
+            )}
+          </div>
+
+          {/* Free Shipping Progress */}
+          {totalPrice > 0 && totalPrice < shippingThreshold && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-700">
+                  Add ৳{amountToFreeShipping.toLocaleString()} more for FREE shipping!
+                </p>
+                <span className="text-xs font-bold text-blue-600">
+                  {Math.round(progressToFree)}%
+                </span>
+              </div>
+              <div className="h-2 bg-white rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500 rounded-full"
+                  style={{ width: `${progressToFree}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
         </header>
 
         {cart.length === 0 ? (
-          <div className="py-40 flex flex-col items-center text-center animate-fadeIn">
-            <div className="relative mb-12">
-                <div className="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100">
-                    <HiOutlineShoppingBag className="w-12 h-12 text-gray-100" />
-                </div>
-                <div className="absolute top-0 right-0 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-[11px] font-black italic">0</div>
+          /* Empty Cart State */
+          <div className="py-32 flex flex-col items-center text-center">
+            <div className="relative mb-8">
+              <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center shadow-lg">
+                <svg className="w-16 h-16 text-gray-400" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <div className="absolute -top-2 -right-2 w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center font-bold shadow-lg">
+                0
+              </div>
             </div>
-            <h2 className="text-[11px] uppercase tracking-[0.6em] font-black italic mb-12 text-gray-300">Your curation is currently void</h2>
-            <Link href="/shop" className="group relative px-20 py-7 bg-black text-white text-[10px] font-black uppercase tracking-[0.6em] overflow-hidden shadow-2xl active:scale-95">
-              <span className="relative z-10">Initiate Discovery</span>
-              <div className="absolute inset-0 bg-neutral-800 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-            </Link>
+            
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-4">
+              Your Cart is Empty
+            </h2>
+            <p className="text-gray-600 mb-8 max-w-md">
+              Looks like you haven't added anything to your cart yet. Start shopping to find amazing products!
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link 
+                href="/shop" 
+                className="inline-flex items-center gap-2 px-8 py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-lg group"
+              >
+                Start Shopping
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" strokeWidth="2.5" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+              
+              <Link 
+                href="/account/wishlist" 
+                className="inline-flex items-center gap-2 px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-bold hover:border-black transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                View Wishlist
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 xl:gap-24 items-start">
+          <div className="grid lg:grid-cols-3 gap-8">
             
-            {/* --- Left: Items List --- */}
-            <div className="lg:col-span-7 space-y-16">
-              {cart.map((item) => (
-                <div key={`${item.id}-${item.selectedSize}`} className="flex flex-col sm:flex-row gap-10 pb-16 border-b border-gray-50 group relative">
-                  
-                  <div className="relative w-full sm:w-56 aspect-[3/4] bg-[#f9f9f9] overflow-hidden shrink-0 border border-gray-50 shadow-sm transition-all duration-700">
-                    <Image 
-                      src={item.imageUrl || "/placeholder.png"} 
-                      alt={item.name}
-                      fill
-                      className="object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-700" 
-                    />
-                  </div>
+            {/* Cart Items */}
+            <div className="lg:col-span-2 space-y-4">
+              {cart.map((item, index) => (
+                <div 
+                  key={`${item.id}-${item.selectedSize}`}
+                  className={`bg-white rounded-2xl border border-gray-200 p-4 md:p-6 shadow-sm hover:shadow-lg transition-all duration-300 ${
+                    removingItem === item.id ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                  }`}
+                  style={{ 
+                    animationDelay: `${index * 50}ms`,
+                    animation: 'fadeIn 0.5s ease-out forwards'
+                  }}
+                >
+                  <div className="flex gap-4 md:gap-6">
+                    {/* Product Image */}
+                    <Link 
+                      href={`/product/${item.id}`}
+                      className="relative w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden shrink-0 group"
+                    >
+                      <Image
+                        src={item.imageUrl || item.image || '/placeholder.png'}
+                        alt={item.name}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    </Link>
 
-                  <div className="flex-grow flex flex-col justify-between py-2">
-                    <div className="space-y-8">
-                      <div className="flex justify-between items-start gap-4">
-                        <div>
-                            <h3 className="text-xl font-black uppercase tracking-widest text-gray-900 mb-2 italic leading-tight">{item.name}</h3>
-                            <p className="text-[9px] uppercase tracking-[0.4em] text-gray-300 font-black italic">Article Ref: #{item.id.slice(-6).toUpperCase()}</p>
-                        </div>
-                        <button onClick={() => handleRemoveItem(item)} className="text-gray-200 hover:text-rose-500 transition-all"><HiOutlineTrash size={22}/></button>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-3">
-                        {item.selectedSize && (
-                            <span className="text-[9px] font-black uppercase tracking-[0.4em] bg-black text-white px-4 py-2 italic">
-                                Size: {item.selectedSize}
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <Link 
+                          href={`/product/${item.id}`}
+                          className="text-base md:text-lg font-bold hover:text-gray-600 transition-colors line-clamp-2"
+                        >
+                          {item.name}
+                        </Link>
+                        
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {item.selectedSize && (
+                            <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-xs font-semibold rounded-lg">
+                              Size: {item.selectedSize}
                             </span>
-                        )}
+                          )}
+                          <span className="text-xs text-gray-500">
+                            SKU: {item.id.slice(-8).toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Price */}
+                        <div className="mt-3">
+                          <p className="text-xl md:text-2xl font-black">
+                            ৳{(item.price * item.quantity).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ৳{item.price.toLocaleString()} each
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-12 sm:mt-0">
-                      <div className="flex items-center gap-8 border border-gray-100 px-6 py-4 rounded-sm bg-white shadow-sm">
-                          <button onClick={() => handleUpdateQuantity(item, item.quantity - 1)} className="text-gray-300 hover:text-black transition-colors"><HiOutlineMinus size={14}/></button>
-                          <span className="font-black text-sm w-8 text-center italic">{item.quantity}</span>
-                          <button onClick={() => handleUpdateQuantity(item, item.quantity + 1)} className="text-gray-300 hover:text-black transition-colors"><HiOutlinePlus size={14}/></button>
-                      </div>
-                      <div className="text-right">
-                         <p className="text-[9px] uppercase tracking-[0.5em] text-gray-300 font-black mb-1 italic">Value</p>
-                         <p className="font-black text-2xl tracking-tighter italic text-gray-900">
-                            {currency}{(item.price * item.quantity).toLocaleString()}
-                         </p>
+
+                      {/* Actions */}
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-2 border-2 border-gray-200 rounded-xl overflow-hidden">
+                          <button
+                            onClick={() => handleUpdateQuantity(item, item.quantity - 1)}
+                            className="p-2 hover:bg-gray-100 transition-colors"
+                            disabled={updatingItem === item.id}
+                          >
+                            <svg className="w-4 h-4" fill="none" strokeWidth="3" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
+                            </svg>
+                          </button>
+                          
+                          <span className="px-3 py-2 font-bold text-lg min-w-[40px] text-center">
+                            {item.quantity}
+                          </span>
+                          
+                          <button
+                            onClick={() => handleUpdateQuantity(item, item.quantity + 1)}
+                            className="p-2 hover:bg-gray-100 transition-colors"
+                            disabled={updatingItem === item.id}
+                          >
+                            <svg className="w-4 h-4" fill="none" strokeWidth="3" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => moveToWishlist(item)}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+                            title="Move to wishlist"
+                          >
+                            <svg className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                          </button>
+                          
+                          <button
+                            onClick={() => handleRemoveItem(item)}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                            title="Remove from cart"
+                          >
+                            <svg className="w-5 h-5 text-gray-600 group-hover:text-red-600 transition-colors" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
-              
+
               {/* Trust Badges */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 pt-8">
-                  <div className="space-y-4">
-                      <RiTruckLine className="w-8 h-8 text-gray-100" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 italic">Secure <br/> Logistics</p>
+              <div className="grid grid-cols-3 gap-4 mt-8 p-6 bg-white rounded-2xl border border-gray-200">
+                {[
+                  { 
+                    icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" /><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" /></svg>,
+                    text: 'Fast Delivery'
+                  },
+                  { 
+                    icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" /></svg>,
+                    text: 'Easy Returns'
+                  },
+                  { 
+                    icon: <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>,
+                    text: 'Secure Payment'
+                  }
+                ].map((item, idx) => (
+                  <div key={idx} className="text-center space-y-2">
+                    <div className="text-green-600 flex justify-center">{item.icon}</div>
+                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
+                      {item.text}
+                    </p>
                   </div>
-                  <div className="space-y-4">
-                      <RiExchangeLine className="w-8 h-8 text-gray-100" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 italic">Exchange <br/> Protocol</p>
-                  </div>
-                  <div className="space-y-4">
-                      <HiOutlineShieldCheck className="w-8 h-8 text-gray-100" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 italic">Privacy <br/> Shield</p>
-                  </div>
+                ))}
               </div>
             </div>
 
-            {/* --- Right: Checkout Summary --- */}
-            <div className="lg:col-span-5">
-               <div className="sticky top-32 bg-white border border-gray-50 p-10 md:p-16 shadow-[0_40px_100px_rgba(0,0,0,0.02)]">
-                  <h2 className="text-[11px] font-black uppercase tracking-[0.8em] mb-16 text-center text-gray-400 italic">Vault Summary</h2>
-                  
-                  <div className="space-y-10 text-[11px] font-black uppercase tracking-[0.4em]">
-                      <div className="flex justify-between text-gray-400">
-                        <p>Articles Total</p>
-                        <p>{currency}{totalPrice.toLocaleString()}</p>
-                      </div>
-                      <div className="flex justify-between text-gray-400">
-                        <p>Logistics</p>
-                        <p>{shippingCost === 0 ? <span className="text-emerald-500">Complimentary</span> : `${currency}${shippingCost}`}</p>
-                      </div>
-                      
-                      {totalPrice < shippingThreshold && totalPrice > 0 && (
-                        <div className="pt-4 space-y-4">
-                            <div className="flex justify-between text-[9px] tracking-[0.3em] text-emerald-600 font-black italic">
-                                <span>Milestone: Free Delivery</span>
-                                <span>{currency}{totalPrice} / {currency}{shippingThreshold}</span>
-                            </div>
-                            <div className="h-[2px] bg-gray-50 overflow-hidden">
-                                <div className="h-full bg-black transition-all duration-1000" style={{ width: `${progressToFree}%` }}></div>
-                            </div>
-                        </div>
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-24 bg-white rounded-2xl border-2 border-gray-200 p-6 shadow-lg">
+                <h2 className="text-xl font-black uppercase tracking-tight mb-6 pb-4 border-b-2 border-gray-200">
+                  Order Summary
+                </h2>
+
+                <div className="space-y-4 mb-6">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal ({cart.length} {cart.length === 1 ? 'item' : 'items'})</span>
+                    <span className="font-bold">৳{totalPrice.toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Shipping</span>
+                    <span className="font-bold">
+                      {shippingCost === 0 ? (
+                        <span className="text-green-600">FREE</span>
+                      ) : (
+                        `৳${shippingCost}`
                       )}
-
-                      <div className="h-[1px] bg-gray-50 my-10"></div>
-                      
-                      <div className="flex justify-between items-end">
-                        <p className="text-[12px] tracking-[0.6em] italic font-black">Investment</p>
-                        <div className="text-right">
-                            <p className="text-4xl font-black tracking-tighter italic leading-none">
-                                {currency}{grandTotal.toLocaleString()}
-                            </p>
-                        </div>
-                      </div>
+                    </span>
                   </div>
 
-                  <div className="mt-20">
-                      <Link href="/checkout" className="group w-full flex items-center justify-center gap-6 bg-black text-white px-8 py-8 text-[11px] font-black uppercase tracking-[0.6em] transition-all overflow-hidden shadow-2xl active:scale-95">
-                         <span className="relative z-10 flex items-center gap-4">
-                             Finalize Acquisition <HiArrowNarrowRight className="text-xl transition-transform group-hover:translate-x-4" />
-                         </span>
-                         <div className="absolute inset-0 bg-neutral-800 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-                      </Link>
-                      
-                      <div className="flex items-center justify-center gap-4 pt-8 border-t border-gray-50 opacity-20 grayscale">
-                         <RiSecurePaymentLine size={20} />
-                         <span className="text-[10px] font-black uppercase tracking-[0.5em] italic">Zaqeen Security 2.0</span>
-                      </div>
+                  <div className="pt-4 border-t-2 border-gray-200">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-sm font-bold uppercase">Total</span>
+                      <span className="text-3xl font-black">৳{grandTotal.toLocaleString()}</span>
+                    </div>
                   </div>
-               </div>
+                </div>
+
+                <Link
+                  href="/checkout"
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition-all shadow-lg hover:shadow-xl group mb-4"
+                >
+                  Proceed to Checkout
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" strokeWidth="2.5" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+
+                <Link
+                  href="/shop"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-bold hover:border-black transition-all"
+                >
+                  Continue Shopping
+                </Link>
+
+                {/* Accepted Payment Methods */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3 text-center">
+                    Accepted Payment Methods
+                  </p>
+                  <div className="flex items-center justify-center gap-3 opacity-60 grayscale">
+                    <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-[8px] font-bold">
+                      bKash
+                    </div>
+                    <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-[8px] font-bold">
+                      Nagad
+                    </div>
+                    <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-[8px] font-bold">
+                      COD
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-
           </div>
         )}
       </main>
+
+      {/* Animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,33 +1,73 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { updateDoc, doc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { HiOutlineArrowLeft, HiOutlineTag, HiOutlineCurrencyDollar, HiOutlineBackspace, HiOutlineCollection, HiOutlinePhotograph, HiOutlineVideoCamera, HiOutlinePlus, HiOutlineTrash, HiOutlineSparkles } from 'react-icons/hi';
 
 const ProductEditPage = () => {
-    const [product, setProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [newSize, setNewSize] = useState('');
+    const [product, setProduct] = useState({
+        name: '',
+        description: '',
+        price: '',
+        discountPrice: '',
+        category: '',
+        subCategory: '',
+        tags: '',
+        sku: '',
+        imageUrl: '',
+        images: ['', '', ''],
+        videoUrl: '',
+        colors: []
+    });
+    
+    const [newColor, setNewColor] = useState('');
+    const [stock, setStock] = useState({ 'M': 0, 'L': 0, 'XL': 0 });
     const [isSizeBased, setIsSizeBased] = useState(true);
+    const [numericStock, setNumericStock] = useState('');
+    const [newSize, setNewSize] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [imagePreview, setImagePreview] = useState('');
+    const [additionalPreviews, setAdditionalPreviews] = useState(['', '', '']);
+    const [errors, setErrors] = useState({});
+    const [activeSection, setActiveSection] = useState(1);
+
     const router = useRouter();
     const { id } = useParams();
 
+    // ==================== FETCH DATA ====================
     useEffect(() => {
         if (!id) return;
         const docRef = doc(db, 'products', id);
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                setProduct({ id: docSnap.id, ...data });
+                
+                // Firestore images array থেকে মেইন ইমেজ বাদে বাকিগুলো আলাদা করা
+                const mainImg = data.images?.[0] || '';
+                const otherImgs = data.images?.slice(1) || ['', '', ''];
+                while(otherImgs.length < 3) otherImgs.push('');
+
+                setProduct({
+                    ...data,
+                    imageUrl: mainImg,
+                    images: otherImgs,
+                    tags: Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || ''),
+                    colors: data.colors || []
+                });
+
+                // Inventory State Setup
                 if (typeof data.stock === 'number') {
                     setIsSizeBased(false);
-                } else if (typeof data.stock !== 'object' || data.stock === null) {
-                    // If stock is undefined or not an object, initialize it as an empty object
-                    setProduct(p => ({...p, stock: {}}));
+                    setNumericStock(data.stock.toString());
+                } else {
+                    setIsSizeBased(true);
+                    setStock(data.stock || { 'M': 0, 'L': 0, 'XL': 0 });
                 }
+
+                setImagePreview(mainImg);
+                setAdditionalPreviews(otherImgs);
             } else {
                 toast.error('Product not found!');
                 router.push('/admin/products');
@@ -37,141 +77,257 @@ const ProductEditPage = () => {
         return () => unsubscribe();
     }, [id, router]);
 
-    const handleInputChange = (e) => {
+    // ==================== HANDLERS ====================
+    const handleChange = (e) => {
         const { name, value } = e.target;
-        setProduct({ ...product, [name]: value });
-    };
-
-    const handleStockChange = (size, value) => {
-        const newStock = { ...(product.stock || {}), [size]: Number(value) };
-        setProduct({ ...product, stock: newStock });
+        setProduct(prev => ({ ...prev, [name]: value }));
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+        if (name === 'imageUrl') setImagePreview(value);
     };
 
     const handleImageChange = (index, value) => {
-        // This logic needs to be careful with imageUrl vs images array
-        const allImages = [product.imageUrl, ...(product.images || [])];
-        allImages[index] = value;
-        setProduct({ ...product, imageUrl: allImages[0], images: allImages.slice(1) });
+        const newImages = [...product.images];
+        newImages[index] = value;
+        setProduct(prev => ({ ...prev, images: newImages }));
+        const newPreviews = [...additionalPreviews];
+        newPreviews[index] = value;
+        setAdditionalPreviews(newPreviews);
+    };
+
+    const handleAddColor = () => {
+        if (newColor.trim()) {
+            if (!product.colors.some(c => c.name === newColor.trim())) {
+                setProduct(prev => ({
+                    ...prev,
+                    colors: [...prev.colors, { name: newColor.trim(), images: ['', '', ''] }]
+                }));
+                setNewColor('');
+                toast.success('Color added');
+            }
+        }
+    };
+
+    const handleRemoveColor = (index) => {
+        const updatedColors = product.colors.filter((_, i) => i !== index);
+        setProduct(prev => ({ ...prev, colors: updatedColors }));
+    };
+
+    const handleColorImageChange = (colorIndex, imageIndex, value) => {
+        const newColors = [...product.colors];
+        newColors[colorIndex].images[imageIndex] = value;
+        setProduct(prev => ({ ...prev, colors: newColors }));
     };
 
     const handleAddSize = () => {
-        if (newSize && !(product.stock && product.stock.hasOwnProperty(newSize))) {
-            const newStock = { ...(product.stock || {}), [newSize.toUpperCase()]: 0 };
-            setProduct({ ...product, stock: newStock });
+        const upperSize = newSize.toUpperCase().trim();
+        if (upperSize && !stock.hasOwnProperty(upperSize)) {
+            setStock(prev => ({ ...prev, [upperSize]: 0 }));
             setNewSize('');
         }
     };
 
     const handleRemoveSize = (size) => {
-        const { [size]: _, ...rest } = (product.stock || {});
-        setProduct({ ...product, stock: rest });
+        const newStock = { ...stock };
+        delete newStock[size];
+        setStock(newStock);
     };
-    
-    const handleSaveProduct = async () => {
-        if (!product.name) {
-            toast.error('Name is required.');
-            return;
-        }
-        setSaving(true);
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!product.name.trim()) newErrors.name = 'Name is required';
+        if (!product.price || product.price <= 0) newErrors.price = 'Valid price is required';
+        if (!product.imageUrl.trim()) newErrors.imageUrl = 'Main image is required';
+        if (!product.category.trim()) newErrors.category = 'Category is required';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // ==================== SUBMIT ====================
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
+
+        setSubmitting(true);
+        const loadingToast = toast.loading('Updating Product Architecture...');
+
         try {
-            const productRef = doc(db, 'products', id);
-            const stockData = isSizeBased ? (product.stock || {}) : Number(product.stock || 0);
-            const dataToSave = {
+            const finalImages = [product.imageUrl, ...product.images.filter(img => img.trim() !== '')];
+            const stockData = isSizeBased ? stock : (parseInt(numericStock) || 0);
+
+            const updatedData = {
                 ...product,
-                price: Number(product.price || 0),
-                discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
-                tags: Array.isArray(product.tags) ? product.tags : (product.tags || '').split(',').map(t => t.trim()),
+                price: parseFloat(product.price),
+                discountPrice: product.discountPrice ? parseFloat(product.discountPrice) : null,
+                tags: product.tags.split(',').map(tag => tag.trim()).filter(t => t),
                 stock: stockData,
-                updatedAt: serverTimestamp(),
+                images: finalImages,
+                updatedAt: serverTimestamp()
             };
-            await updateDoc(productRef, dataToSave);
-            toast.success('Product updated successfully!');
+
+            await updateDoc(doc(db, 'products', id), updatedData);
+            toast.dismiss(loadingToast);
+            toast.success('Identity Updated Successfully');
             router.push('/admin/products');
         } catch (error) {
-            toast.error('Failed to save product.');
-            console.error("Error updating product: ", error);
+            toast.dismiss(loadingToast);
+            toast.error('Update Failed');
+            console.error(error);
         } finally {
-            setSaving(false);
+            setSubmitting(false);
         }
     };
 
-    if (loading || !product) return <div className="h-screen flex items-center justify-center"><p>Loading Product Editor...</p></div>;
+    // ==================== UI COMPONENTS ====================
+    const InputField = ({ icon, name, placeholder, value, onChange, type = "text", error, required = false }) => (
+        <div className="space-y-2">
+            <div className={`group relative transition-all ${error ? 'animate-shake' : ''}`}>
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-black transition-colors">
+                    {icon}
+                </div>
+                <input 
+                    type={type} name={name} placeholder={placeholder} value={value} onChange={onChange}
+                    className={`w-full pl-12 pr-4 py-4 bg-white border ${error ? 'border-red-500' : 'border-gray-200'} focus:border-black outline-none transition-all text-[11px] font-bold uppercase tracking-wide placeholder:text-gray-300`}
+                    required={required}
+                />
+            </div>
+        </div>
+    );
 
-    const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean);
+    const ImagePreviewCard = ({ url, label, onRemove }) => (
+        <div className="relative group aspect-square bg-gray-100 border border-gray-200 overflow-hidden">
+            {url ? (
+                <img src={url} alt={label} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </div>
+            )}
+            {url && (
+                <button type="button" onClick={onRemove} className="absolute top-2 right-2 p-1 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            )}
+        </div>
+    );
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-black uppercase tracking-widest">Synchronizing...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-10">
-            <div className="max-w-4xl mx-auto">
-                 <header className="mb-12 flex items-center gap-4">
-                    <button onClick={() => router.back()} className="p-2 hover:bg-gray-200 rounded-full transition"><HiOutlineArrowLeft size={24}/></button>
-                    <div><h1 className="text-3xl font-black uppercase tracking-tighter italic">Edit Creation</h1><p className="text-sm text-gray-400 font-bold tracking-widest mt-1">Refine the Zaqeen Universe</p></div>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-12">
+            <div className="max-w-5xl mx-auto">
+                <header className="mb-12">
+                    <span className="text-[10px] font-black uppercase tracking-[0.6em] text-gray-400">System / Editor</span>
+                    <h1 className="text-4xl md:text-7xl font-black uppercase tracking-tighter mt-2">Modify Article</h1>
+                    <p className="text-[11px] text-gray-500 font-bold mt-4 uppercase">Update technical specifications for {product.name}</p>
                 </header>
 
-                <div className="space-y-8">
-                     <div className="p-8 bg-white border border-gray-100 rounded-lg shadow-lg shadow-black/[0.02]">
-                        <h2 className="text-lg font-bold tracking-tight mb-6 flex items-center gap-3"><HiOutlineSparkles/>Core Details</h2>
+                <form onSubmit={handleSubmit} className="space-y-16">
+                    {/* SECTION 01: CORE */}
+                    <div className="space-y-8">
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                            <span className="w-8 h-8 bg-black text-white flex items-center justify-center">01</span> Core Data
+                        </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="md:col-span-2"><InputField icon={<HiOutlineCollection/>} name="name" placeholder="Product Name" value={product.name || ''} onChange={handleInputChange} /></div>
-                            <InputField icon={<HiOutlineCurrencyDollar/>} name="price" placeholder="Original Price" value={product.price || ''} onChange={handleInputChange} type="number" />
-                            <InputField icon={<HiOutlineTag/>} name="discountPrice" placeholder="Discount Price" value={product.discountPrice || ''} onChange={handleInputChange} type="number" />
-                            <InputField icon={<HiOutlineTag/>} name="category" placeholder="Category" value={product.category || ''} onChange={handleInputChange} />
-                            <div className="md:col-span-2"><InputField icon={<HiOutlineTag/>} name="tags" placeholder="Tags (comma-separated)" value={Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || '')} onChange={handleInputChange} /></div>
-                            <InputField icon={<HiOutlineBackspace/>} name="sku" placeholder="SKU" value={product.sku || ''} onChange={handleInputChange} />
-                             <div className="md:col-span-2">
-                                <div className="relative"><textarea name="description" placeholder="Product Description" value={product.description || ''} onChange={handleInputChange} rows="4" className="w-full pl-4 pr-4 py-4 bg-white border border-gray-100 rounded-lg shadow-sm focus:ring-2 focus:ring-black/50 transition-all text-sm tracking-wide font-medium"></textarea></div>
+                            <div className="md:col-span-2">
+                                <InputField name="name" placeholder="Article Name" value={product.name} onChange={handleChange} error={errors.name} required />
+                            </div>
+                            <InputField name="price" type="number" placeholder="Base Price" value={product.price} onChange={handleChange} error={errors.price} required />
+                            <InputField name="discountPrice" type="number" placeholder="Offer Price" value={product.discountPrice} onChange={handleChange} />
+                            <InputField name="category" placeholder="Category" value={product.category} onChange={handleChange} required />
+                            <InputField name="sku" placeholder="Stock Keeping Unit (SKU)" value={product.sku} onChange={handleChange} />
+                            <div className="md:col-span-2">
+                                <textarea 
+                                    name="description" value={product.description} onChange={handleChange} rows="4" placeholder="Technical Description..."
+                                    className="w-full p-4 bg-white border border-gray-200 focus:border-black outline-none text-[11px] font-bold uppercase tracking-wide"
+                                />
                             </div>
                         </div>
                     </div>
 
-                     <div className="p-8 bg-white border border-gray-100 rounded-lg shadow-lg shadow-black/[0.02]">
-                        <h2 className="text-lg font-bold tracking-tight mb-6">Stock Management</h2>
-                        <div className="flex items-center gap-4 mb-6">
-                            <label className="flex items-center cursor-pointer"><input type="radio" name="stockType" checked={isSizeBased} onChange={() => setIsSizeBased(true)} className="mr-2"/><span className="text-sm font-bold">Size-based Stock</span></label>
-                            <label className="flex items-center cursor-pointer"><input type="radio" name="stockType" checked={!isSizeBased} onChange={() => setIsSizeBased(false)} className="mr-2"/><span className="text-sm font-bold">Numeric Stock</span></label>
+                    {/* SECTION 02: INVENTORY */}
+                    <div className="space-y-8">
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                            <span className="w-8 h-8 bg-black text-white flex items-center justify-center">02</span> Inventory
+                        </h2>
+                        <div className="flex bg-gray-100 p-1">
+                            <button type="button" onClick={() => setIsSizeBased(true)} className={`flex-1 py-3 text-[9px] font-black uppercase ${isSizeBased ? 'bg-black text-white' : 'text-gray-400'}`}>Size Matrix</button>
+                            <button type="button" onClick={() => setIsSizeBased(false)} className={`flex-1 py-3 text-[9px] font-black uppercase ${!isSizeBased ? 'bg-black text-white' : 'text-gray-400'}`}>Bulk Stock</button>
                         </div>
                         {isSizeBased ? (
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <input type="text" value={newSize} onChange={(e) => setNewSize(e.target.value)} placeholder="Add Size (e.g., M)" className="w-full input"/>
-                                    <button type="button" onClick={handleAddSize} className="p-3 bg-gray-200 rounded-lg hover:bg-gray-300"><HiOutlinePlus/></button>
-                                </div>
-                                {product.stock && typeof product.stock === 'object' && Object.keys(product.stock).map(size => (
-                                    <div key={size} className="flex items-center gap-4 p-2 rounded-lg bg-gray-50/50">
-                                        <span className="font-bold w-20 text-center">{size}</span>
-                                        <input type="number" value={product.stock[size] || 0} onChange={(e) => handleStockChange(size, e.target.value)} className="w-full input" />
-                                        <button type="button" onClick={() => handleRemoveSize(size)} className="p-2 text-rose-500 hover:bg-rose-100 rounded-full"><HiOutlineTrash/></button>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                {Object.entries(stock).map(([size, qty]) => (
+                                    <div key={size} className="bg-white border p-4 text-center">
+                                        <div className="flex justify-between text-[10px] font-black mb-2"><span>{size}</span><button type="button" onClick={() => handleRemoveSize(size)}>×</button></div>
+                                        <input type="number" value={qty} onChange={(e) => setStock({...stock, [size]: e.target.value})} className="w-full text-center font-black border-none focus:ring-0" />
                                     </div>
                                 ))}
+                                <div className="border-2 border-dashed p-4 flex flex-col gap-2">
+                                    <input type="text" placeholder="NEW" value={newSize} onChange={(e) => setNewSize(e.target.value)} className="text-center text-[10px] uppercase font-black" />
+                                    <button type="button" onClick={handleAddSize} className="bg-black text-white text-[8px] py-1 font-black">ADD</button>
+                                </div>
                             </div>
                         ) : (
-                            <InputField icon={<HiOutlineCollection/>} name="stock" placeholder="Total Stock Quantity" value={product.stock || ''} onChange={handleInputChange} type="number" />
+                            <InputField name="numericStock" type="number" placeholder="Total Units" value={numericStock} onChange={(e) => setNumericStock(e.target.value)} />
                         )}
                     </div>
 
-                     <div className="p-8 bg-white border border-gray-100 rounded-lg shadow-lg shadow-black/[0.02]">
-                        <h2 className="text-lg font-bold tracking-tight mb-6 flex items-center gap-3"><HiOutlinePhotograph/>Product Media</h2>
-                        <div className="space-y-4">
-                            {allImages.map((img, index) => (<InputField key={index} icon={<HiOutlinePhotograph/>} placeholder={`Image URL ${index + 1}`} value={img} onChange={(e) => handleImageChange(index, e.target.value)} />))}
-                            <InputField icon={<HiOutlineVideoCamera/>} name="videoUrl" placeholder="Video URL" value={product.videoUrl || ''} onChange={handleInputChange} />
+                    {/* SECTION 03: COLORS */}
+                    <div className="space-y-8">
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                            <span className="w-8 h-8 bg-black text-white flex items-center justify-center">03</span> Chromatics
+                        </h2>
+                        <div className="flex gap-4">
+                            <input value={newColor} onChange={(e) => setNewColor(e.target.value)} placeholder="Color ID" className="flex-1 p-4 border text-[11px] font-black uppercase" />
+                            <button type="button" onClick={handleAddColor} className="bg-black text-white px-8 font-black text-[10px] uppercase">Append</button>
+                        </div>
+                        <div className="space-y-6">
+                            {product.colors.map((color, cIdx) => (
+                                <div key={cIdx} className="border p-6 space-y-4">
+                                    <div className="flex justify-between font-black uppercase text-sm"><span>{color.name}</span><button type="button" onClick={() => handleRemoveColor(cIdx)} className="text-red-500">Remove</button></div>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {color.images.map((img, iIdx) => (
+                                            <div key={iIdx} className="space-y-2">
+                                                <ImagePreviewCard url={img} onRemove={() => handleColorImageChange(cIdx, iIdx, '')} />
+                                                <input value={img} onChange={(e) => handleColorImageChange(cIdx, iIdx, e.target.value)} placeholder="URL" className="w-full text-[8px] border p-1" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="flex justify-end pt-6"><button onClick={handleSaveProduct} disabled={saving} className="bg-black text-white px-10 py-4 rounded-lg font-bold uppercase tracking-widest text-xs disabled:bg-gray-400">{saving ? 'Saving... ' : 'Save Changes'}</button></div>
-                </div>
+                    {/* SECTION 04: VISUALS */}
+                    <div className="space-y-8">
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] flex items-center gap-3">
+                            <span className="w-8 h-8 bg-black text-white flex items-center justify-center">04</span> Media
+                        </h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <ImagePreviewCard url={imagePreview} label="Primary" onRemove={() => { setProduct({...product, imageUrl: ''}); setImagePreview(''); }} />
+                            {additionalPreviews.map((url, i) => (
+                                <ImagePreviewCard key={i} url={url} label={`Asset ${i+2}`} onRemove={() => handleImageChange(i, '')} />
+                            ))}
+                        </div>
+                        <div className="space-y-4">
+                            <InputField name="imageUrl" placeholder="Hero Asset URL" value={product.imageUrl} onChange={handleChange} error={errors.imageUrl} />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {product.images.map((img, i) => (
+                                    <input key={i} value={img} onChange={(e) => handleImageChange(i, e.target.value)} placeholder={`Gallery Asset ${i+1}`} className="p-4 border text-[11px] font-black" />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" disabled={submitting}
+                        className="w-full bg-black text-white py-8 text-[11px] font-black uppercase tracking-[0.5em] hover:bg-neutral-900 transition-all disabled:opacity-50"
+                    >
+                        {submitting ? 'Updating System...' : 'Commit Changes to Catalog'}
+                    </button>
+                </form>
             </div>
         </div>
     );
 };
 
-const InputField = ({ icon, name, placeholder, value, onChange, type = "text" }) => (
-    <div className="relative">
-        {icon && <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">{icon}</div>}
-        <input type={type} name={name} placeholder={placeholder} value={value} onChange={onChange}
-            className={`w-full ${icon ? 'pl-12' : 'pl-4'} pr-4 py-4 bg-white border border-gray-100 rounded-lg shadow-sm focus:ring-2 focus:ring-black/50 transition-all text-sm tracking-wide font-medium`}/>
-    </div>
-);
-
 export default ProductEditPage;
-
-// Basic input styling, can be in a global css file.
-// .input { @apply w-full p-3 bg-gray-100 border rounded-md focus:ring-2 focus:ring-black/50; }
