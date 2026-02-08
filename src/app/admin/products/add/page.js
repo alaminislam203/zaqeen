@@ -15,20 +15,32 @@ const generateWithAI = async (prompt) => {
         }
 
         const data = await response.json();
-        
-        // Optional Chaining ব্যবহার করে ক্লিন কোড
+        console.log('AI Response data:', data);
+
+        // ১. যদি এপিআই সরাসরি স্ট্রিং রিটার্ন করে
+        if (typeof data === 'string') return data;
+
+        // ২. অবজেক্ট হলে সম্ভাব্য সব কী (Key) চেক করা
         const result = data?.response ?? data?.text ?? data?.content ?? data?.message ?? data?.result;
 
+        // ৩. যদি রেজাল্ট পাওয়া যায়, তবে সেটি রিটার্ন করা
         if (result) {
-            return result;
+            // অনেক সময় রেজাল্ট আবার অন্য অবজেক্ট হতে পারে, তাই স্ট্রিং নিশ্চিত করা
+            return typeof result === 'object' ? JSON.stringify(result) : result;
         } 
         
+        // ৪. শেষ চেষ্টা: যদি উপরের কিছুই না মেলে কিন্তু ডেটা খালি না হয়
+        if (data && Object.keys(data).length > 0) {
+            // প্রথম যে ভ্যালু পাওয়া যায় সেটিই রিটার্ন করা (Fallback)
+            return Object.values(data)[0];
+        }
+
         console.warn('Unexpected AI response format:', data);
         return 'AI response unavailable - unexpected format';
 
     } catch (error) {
         console.error('AI Error:', error.message);
-        throw error; // কলার ফাংশনে এররটি হ্যান্ডেল করার জন্য পাঠানো হলো
+        return `Error: ${error.message}`; // সরাসরি এরর মেসেজ রিটার্ন করলে UI ব্রেক করবে না
     }
 };
 const AddProductPage = () => {
