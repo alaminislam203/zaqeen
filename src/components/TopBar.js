@@ -267,7 +267,7 @@ const TopBar = () => {
                       viewBox="0 0 20 20"
                     >
                       <path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 100-4V6z" />
-                    </svg>
+                    </svg>   
 
                     {/* Coupon Code */}
                     <span className="text-[9px] sm:text-[10px] font-black tracking-[0.2em] text-white uppercase relative z-10">
@@ -277,7 +277,7 @@ const TopBar = () => {
                     {/* Discount Badge */}
                     {coupon.discount && (
                       <span className="text-[7px] sm:text-[8px] font-black text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-sm border border-amber-400/20">
-                        -{coupon.discount}%
+                        -{coupon.discount}
                       </span>
                     )}
 
