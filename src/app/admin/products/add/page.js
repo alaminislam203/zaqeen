@@ -4,36 +4,33 @@ import { db } from '@/lib/firebase';
 import { collection, serverTimestamp, setDoc, doc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-// AI API function
 const generateWithAI = async (prompt) => {
     try {
         console.log('AI Request:', prompt);
         const response = await fetch(`https://rabby-gemini-ai.vercel.app/api?ai=${encodeURIComponent(prompt)}`);
-        console.log('AI Response status:', response.status);
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('AI API Error:', response.status, errorText);
-            throw new Error(`AI request failed: ${response.status}`);
+            throw new Error(`AI request failed: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
-        console.log('AI Response data:', data);
+        
+        // Optional Chaining ব্যবহার করে ক্লিন কোড
+        const result = data?.response ?? data?.text ?? data?.content ?? data?.message ?? data?.result;
 
-        // Try different possible response formats
-        const result = data.response || data.text || data.content || data.message || data.result;
         if (result) {
             return result;
-        } else {
-            console.warn('Unexpected AI response format:', data);
-            return 'AI response unavailable - unexpected format';
-        }
+        } 
+        
+        console.warn('Unexpected AI response format:', data);
+        return 'AI response unavailable - unexpected format';
+
     } catch (error) {
-        console.error('AI Error:', error);
-        throw error;
+        console.error('AI Error:', error.message);
+        throw error; // কলার ফাংশনে এররটি হ্যান্ডেল করার জন্য পাঠানো হলো
     }
 };
-
 const AddProductPage = () => {
     const [product, setProduct] = useState({
         name: '',
