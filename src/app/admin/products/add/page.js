@@ -73,7 +73,7 @@ const AddProductPage = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setProduct(prev => ({ ...prev, [name]: value }));
-        
+
         // Clear error for this field
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
@@ -82,6 +82,36 @@ const AddProductPage = () => {
         // Live preview for main image
         if (name === 'imageUrl') {
             setImagePreview(value);
+        }
+    };
+
+
+
+    // --- AI Description & Table Generator ---
+    const handleAiGenerate = async () => {
+        if (!product.name.trim()) {
+            toast.error('প্রথমে প্রোডাক্টের নাম দিন');
+            return;
+        }
+        const loading = toast.loading('AI ডেসক্রিপশন তৈরি করছে...');
+        try {
+            const prompt = `
+                প্রোডাক্ট: "${product.name}"
+                ক্যাটাগরি: "${product.category || 'Premium Fashion'}"
+                এই তথ্যের ভিত্তিতে একটি প্রিমিয়াম বাংলা ডেসক্রিপশন তৈরি করো।
+
+                ফরম্যাট:
+                ১. প্রথমে <b> ট্যাগ দিয়ে একটি ক্যাচি হেডলাইন।
+                ২. তারপর <br/> দিয়ে একটি ভূমিকা।
+                ৩. তারপর একটি HTML <table> তৈরি করো যাতে সাইজ (M, L, XL, XXL) এবং চেস্ট মেজারমেন্ট থাকে।
+                ৪. শেষে <ul> এবং <li> ব্যবহার করে ৪টি মূল বৈশিষ্ট্য দাও।
+                ৫. সব টেক্সট বাংলায় হবে।
+            `;
+            const result = await generateWithAI(prompt);
+            setProduct(prev => ({ ...prev, description: result }));
+            toast.success('প্রিমিয়াম ডেসক্রিপশন তৈরি হয়েছে!', { id: loading });
+        } catch (err) {
+            toast.error('AI রেসপন্স পেতে সমস্যা হয়েছে', { id: loading });
         }
     };
 
@@ -482,27 +512,33 @@ const AddProductPage = () => {
 
                             <div className="md:col-span-2 space-y-2">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-[9px] font-black uppercase tracking-wide text-gray-500">Product Description</label>
+                                    <label className="text-[9px] font-black uppercase tracking-wide text-gray-500">Description & Logic</label>
                                     <button
                                         type="button"
                                         onClick={async () => {
                                             if (!product.name.trim()) {
-                                                toast.error('Please enter a product name first', {
-                                                    style: { borderRadius: '0px', background: '#ef4444', color: '#fff', fontSize: '10px' }
-                                                });
+                                                toast.error('প্রথমে প্রোডাক্টের নাম দিন');
                                                 return;
                                             }
+                                            const loading = toast.loading('AI ডেসক্রিপশন তৈরি করছে...');
                                             try {
-                                                const prompt = `Generate a compelling product description for "${product.name}" in the ${product.category || 'fashion'} category. Make it engaging, highlight key features, and keep it under 200 words.`;
-                                                const aiDescription = await generateWithAI(prompt);
-                                                setProduct(prev => ({ ...prev, description: aiDescription }));
-                                                toast.success('Description generated!', {
-                                                    style: { borderRadius: '0px', background: '#10b981', color: '#fff', fontSize: '10px' }
-                                                });
-                                            } catch (error) {
-                                                toast.error('Failed to generate description', {
-                                                    style: { borderRadius: '0px', background: '#ef4444', color: '#fff', fontSize: '10px' }
-                                                });
+                                                const prompt = `
+                                                    প্রোডাক্ট: "${product.name}"
+                                                    ক্যাটাগরি: "${product.category || 'Premium Fashion'}"
+                                                    এই তথ্যের ভিত্তিতে একটি প্রিমিয়াম বাংলা ডেসক্রিপশন তৈরি করো।
+
+                                                    ফরম্যাট:
+                                                    ১. প্রথমে <b> ট্যাগ দিয়ে একটি ক্যাচি হেডলাইন।
+                                                    ২. তারপর <br/> দিয়ে একটি ভূমিকা।
+                                                    ৩. তারপর একটি HTML <table> তৈরি করো যাতে সাইজ (M, L, XL, XXL) এবং চেস্ট মেজারমেন্ট থাকে।
+                                                    ৪. শেষে <ul> এবং <li> ব্যবহার করে ৪টি মূল বৈশিষ্ট্য দাও।
+                                                    ৫. সব টেক্সট বাংলায় হবে।
+                                                `;
+                                                const result = await generateWithAI(prompt);
+                                                setProduct(prev => ({ ...prev, description: result }));
+                                                toast.success('প্রিমিয়াম ডেসক্রিপশন তৈরি হয়েছে!', { id: loading });
+                                            } catch (err) {
+                                                toast.error('AI রেসপন্স পেতে সমস্যা হয়েছে', { id: loading });
                                             }
                                         }}
                                         className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-[9px] font-black uppercase tracking-wide hover:from-blue-600 hover:to-purple-700 transition-all"
@@ -510,7 +546,7 @@ const AddProductPage = () => {
                                         <svg className="w-4 h-4" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                                         </svg>
-                                        AI Generate
+                                        AI Generate (Bangla)
                                     </button>
                                 </div>
                                 <div className="relative group">
@@ -521,14 +557,25 @@ const AddProductPage = () => {
                                     </div>
                                     <textarea
                                         name="description"
-                                        placeholder="Product Description..."
+                                        placeholder="HTML description will appear here..."
                                         value={product.description}
                                         onChange={handleChange}
-                                        rows="5"
-                                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 focus:border-black outline-none transition-all text-[11px] font-bold tracking-wide placeholder:text-gray-300 resize-none hover:border-gray-300"
+                                        rows="10"
+                                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 focus:border-black outline-none transition-all text-[13px] font-medium text-gray-800 leading-relaxed"
                                     ></textarea>
                                 </div>
                             </div>
+
+                            {/* --- Live HTML Preview Section --- */}
+                            {product.description && (
+                                <div className="p-6 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg">
+                                    <span className="text-[9px] font-black uppercase text-blue-500 mb-4 block tracking-[0.2em]">Customer View Preview</span>
+                                    <div
+                                        className="prose prose-sm max-w-none text-gray-800"
+                                        dangerouslySetInnerHTML={{ __html: product.description }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
