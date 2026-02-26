@@ -1,84 +1,53 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, limit, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, limit, orderBy } from 'firebase/firestore';
 import Hero from '@/components/Hero';
 import NewArrivals from '@/components/NewArrivals';
 import Link from 'next/link';
+import Image from 'next/image';
+
+// Types
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl?: string;
+  createdAt?: any;
+}
+
+interface Testimonial {
+  id: string;
+  name: string;
+  comment: string;
+  rating: number;
+}
+
+interface SectionRefs {
+  values: React.RefObject<HTMLElement>;
+  philosophy: React.RefObject<HTMLElement>;
+  social: React.RefObject<HTMLElement>;
+  newsletter: React.RefObject<HTMLElement>;
+}
 
 export default function HomePage() {
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [testimonials, setTestimonials] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const [visibleSections, setVisibleSections] = useState({});
+  const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({});
+  const [email, setEmail] = useState('');
+  const [subscribing, setSubscribing] = useState(false);
   
-  const sectionRefs = {
-    values: useRef(null),
-    philosophy: useRef(null),
-    social: useRef(null),
-    newsletter: useRef(null)
+  const sectionRefs: SectionRefs = {
+    values: useRef<HTMLElement>(null),
+    philosophy: useRef<HTMLElement>(null),
+    social: useRef<HTMLElement>(null),
+    newsletter: useRef<HTMLElement>(null)
   };
 
-  // Intersection Observer for scroll animations
-  useEffect(() => {
-    const observers = Object.entries(sectionRefs).map(([key, ref]) => {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setVisibleSections(prev => ({ ...prev, [key]: true }));
-          }
-        },
-        { threshold: 0.1 }
-      );
-
-      if (ref.current) {
-        observer.observe(ref.current);
-      }
-
-      return { observer, ref };
-    });
-
-    return () => {
-      observers.forEach(({ observer, ref }) => {
-        if (ref.current) {
-          observer.unobserve(ref.current);
-        }
-      });
-    };
-  }, []);
-
-  // Fetch products and testimonials
-  useEffect(() => {
-    const q = query(
-      collection(db, 'products'), 
-      orderBy('createdAt', 'desc'), 
-      limit(8)
-    );
-    
-    const unsub = onSnapshot(q, (snapshot) => {
-      const productsData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
-      }));
-      setFeaturedProducts(productsData);
-      setLoading(false);
-    });
-
-    return () => unsub();
-  }, []);
-
-  // Auto-rotate testimonials
-  useEffect(() => {
-    if (testimonials.length > 1) {
-      const interval = setInterval(() => {
-        setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [testimonials.length]);
-
-  const brandValues = [
+  // Memoized brand values
+  const brandValues = useMemo(() => [
     { 
       title: "Premium Quality", 
       desc: "Crafted with the finest materials for ultimate durability and comfort.",
@@ -94,16 +63,171 @@ export default function HomePage() {
       desc: "Committed to responsible production and ethical practices.",
       icon: <svg className="w-8 h-8" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
     }
-  ];
+  ], []);
 
-  const instagramImages = [
-    "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1974",
-    "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1974",
-    "https://images.unsplash.com/photo-1598033129183-c4f50c717658?q=80&w=1974",
-    "https://images.unsplash.com/photo-1507680434567-5739c80be1ac?q=80&w=2070",
-    "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2070",
-    "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070"
-  ];
+  // Memoized Instagram images
+  const instagramImages = useMemo(() => [
+    {
+      url: "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1974",
+      alt: "Stylish men's fashion"
+    },
+    {
+      url: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1974",
+      alt: "Modern streetwear style"
+    },
+    {
+      url: "https://images.unsplash.com/photo-1598033129183-c4f50c717658?q=80&w=1974",
+      alt: "Casual wear collection"
+    },
+    {
+      url: "https://images.unsplash.com/photo-1507680434567-5739c80be1ac?q=80&w=2070",
+      alt: "Contemporary fashion"
+    },
+    {
+      url: "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2070",
+      alt: "Lifestyle apparel"
+    },
+    {
+      url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070",
+      alt: "Urban fashion"
+    }
+  ], []);
+
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    
+    Object.entries(sectionRefs).forEach(([key, ref]) => {
+      if (ref.current) {
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting) {
+              setVisibleSections(prev => ({ ...prev, [key]: true }));
+            }
+          },
+          { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+        );
+
+        observer.observe(ref.current);
+        observers.push(observer);
+      }
+    });
+
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+    };
+  }, []);
+
+  // Fetch products
+  useEffect(() => {
+    let isMounted = true;
+    
+    try {
+      const productsQuery = query(
+        collection(db, 'products'),
+        orderBy('createdAt', 'desc'),
+        limit(8)
+      );
+      
+      const unsub = onSnapshot(productsQuery, 
+        (snapshot) => {
+          if (isMounted) {
+            const productsData = snapshot.docs.map(doc => ({ 
+              id: doc.id, 
+              ...doc.data() 
+            })) as Product[];
+            setFeaturedProducts(productsData);
+            setLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error fetching products:', error);
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      );
+
+      return () => {
+        isMounted = false;
+        unsub();
+      };
+    } catch (error) {
+      console.error('Error setting up products listener:', error);
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  // Fetch testimonials
+  useEffect(() => {
+    let isMounted = true;
+    
+    try {
+      const testimonialsQuery = query(
+        collection(db, 'testimonials'),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      );
+      
+      const unsub = onSnapshot(testimonialsQuery,
+        (snapshot) => {
+          if (isMounted) {
+            const testimonialsData = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as Testimonial[];
+            setTestimonials(testimonialsData);
+          }
+        },
+        (error) => {
+          console.error('Error fetching testimonials:', error);
+        }
+      );
+
+      return () => {
+        isMounted = false;
+        unsub();
+      };
+    } catch (error) {
+      console.error('Error setting up testimonials listener:', error);
+    }
+  }, []);
+
+  // Auto-rotate testimonials
+  useEffect(() => {
+    if (testimonials.length > 1) {
+      const interval = setInterval(() => {
+        setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [testimonials.length]);
+
+  // Newsletter subscription handler
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    setSubscribing(true);
+    
+    try {
+      // Add your newsletter subscription logic here
+      // await addDoc(collection(db, 'subscribers'), { email, subscribedAt: new Date() });
+      
+      alert('Successfully subscribed to newsletter!');
+      setEmail('');
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      alert('Failed to subscribe. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-white selection:bg-black selection:text-white overflow-x-hidden">
@@ -202,10 +326,13 @@ export default function HomePage() {
                 
                 {/* Main image */}
                 <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
-                  <img 
+                  <Image 
                     src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070" 
                     alt="Zaqeen Philosophy" 
+                    width={800}
+                    height={1000}
                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[2s]"
+                    priority
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 </div>
@@ -288,6 +415,49 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      {testimonials.length > 0 && (
+        <section className="py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+            <h2 className="text-3xl font-black uppercase tracking-tight text-center mb-12">
+              What Our Customers Say
+            </h2>
+            
+            <div className="relative max-w-3xl mx-auto">
+              {testimonials.map((testimonial, index) => (
+                <div
+                  key={testimonial.id}
+                  className={`transition-all duration-700 ${
+                    index === activeTestimonial 
+                      ? 'opacity-100 translate-x-0' 
+                      : 'opacity-0 absolute top-0 left-0 w-full pointer-events-none translate-x-full'
+                  }`}
+                >
+                  <div className="bg-white p-8 rounded-2xl shadow-lg">
+                    <div className="flex items-center gap-2 mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <svg
+                          key={i}
+                          className={`w-5 h-5 ${
+                            i < testimonial.rating ? 'text-yellow-400' : 'text-gray-300'
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                    <p className="text-gray-700 text-lg mb-4">{testimonial.comment}</p>
+                    <p className="font-bold">{testimonial.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Instagram/Social Proof Section */}
       <section 
         ref={sectionRefs.social}
@@ -334,7 +504,7 @@ export default function HomePage() {
 
           {/* Instagram Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-            {instagramImages.map((url, i) => (
+            {instagramImages.map((image, i) => (
               <a
                 key={i}
                 href="https://instagram.com/zaqeen.bd"
@@ -345,10 +515,13 @@ export default function HomePage() {
                 }`}
                 style={{ transitionDelay: `${i * 100}ms` }}
               >
-                <img 
-                  src={url} 
-                  alt={`Instagram post ${i + 1}`} 
+                <Image 
+                  src={image.url} 
+                  alt={image.alt} 
+                  width={400}
+                  height={400}
                   className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                  loading="lazy"
                 />
                 
                 {/* Overlay */}
@@ -398,17 +571,22 @@ export default function HomePage() {
               Subscribe to get exclusive offers, new arrivals, and insider news
             </p>
 
-            <form className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="flex-1 px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-gray-400 outline-none focus:border-white transition-all backdrop-blur-sm"
+                disabled={subscribing}
+                required
               />
               <button
                 type="submit"
-                className="px-8 py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
+                disabled={subscribing}
+                className="px-8 py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Subscribe
+                {subscribing ? 'Subscribing...' : 'Subscribe'}
                 <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" strokeWidth="2.5" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
