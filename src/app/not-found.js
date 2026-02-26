@@ -23,7 +23,7 @@ export default function NotFound() {
     return () => clearInterval(timer);
   }, [router]);
 
-  const handleSearch = (e) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
@@ -70,13 +70,40 @@ export default function NotFound() {
     { name: 'টার্মস অফ সার্ভিস', link: '/terms' }
   ];
 
+  // Dynamic color classes
+  const getColorClasses = (color: string) => {
+    const colors = {
+      blue: {
+        bg: 'bg-blue-100',
+        text: 'text-blue-600',
+        groupHover: 'group-hover:text-white'
+      },
+      green: {
+        bg: 'bg-green-100',
+        text: 'text-green-600',
+        groupHover: 'group-hover:text-white'
+      },
+      purple: {
+        bg: 'bg-purple-100',
+        text: 'text-purple-600',
+        groupHover: 'group-hover:text-white'
+      },
+      amber: {
+        bg: 'bg-amber-100',
+        text: 'text-amber-600',
+        groupHover: 'group-hover:text-white'
+      }
+    };
+    return colors[color as keyof typeof colors] || colors.blue;
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-white selection:bg-black selection:text-white">
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 md:py-20">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 md:py-20 relative">
         
         {/* Large 404 Background */}
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none overflow-hidden opacity-[0.03] z-0">
-          <h1 className="text-[40vw] font-black">404</h1>
+          <h1 className="text-[40vw] font-black select-none">404</h1>
         </div>
 
         {/* Content */}
@@ -137,27 +164,30 @@ export default function NotFound() {
           <div className="mb-16">
             <h2 className="text-2xl font-black uppercase tracking-tight text-center mb-8">দ্রুত লিঙ্ক</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {quickLinks.map((item, idx) => (
-                <Link
-                  key={idx}
-                  href={item.link}
-                  className="bg-white border-2 border-gray-200 p-8 hover:border-black transition-all group"
-                >
-                  <div className={`w-14 h-14 bg-${item.color}-100 flex items-center justify-center mb-4 group-hover:bg-black transition-all`}>
-                    <svg className={`w-7 h-7 text-${item.color}-600 group-hover:text-white transition-all`} fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-black uppercase tracking-tight mb-2">{item.title}</h3>
-                  <p className="text-sm text-gray-600">{item.description}</p>
-                  <div className="mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span>দেখুন</span>
-                    <svg className="w-4 h-4" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  </div>
-                </Link>
-              ))}
+              {quickLinks.map((item, idx) => {
+                const colors = getColorClasses(item.color);
+                return (
+                  <Link
+                    key={idx}
+                    href={item.link}
+                    className="bg-white border-2 border-gray-200 p-8 hover:border-black transition-all group"
+                  >
+                    <div className={`w-14 h-14 ${colors.bg} flex items-center justify-center mb-4 group-hover:bg-black transition-all`}>
+                      <svg className={`w-7 h-7 ${colors.text} ${colors.groupHover} transition-all`} fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-tight mb-2">{item.title}</h3>
+                    <p className="text-sm text-gray-600">{item.description}</p>
+                    <div className="mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span>দেখুন</span>
+                      <svg className="w-4 h-4" fill="none" strokeWidth="2" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                      </svg>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -231,7 +261,7 @@ export default function NotFound() {
                 </svg>
                 ইমেইল করুন
               </Link>
-              
+              <Link
                 href="tel:+8801234567890"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-white border-2 border-white text-[10px] font-black uppercase tracking-wider hover:bg-white hover:text-black transition-all"
               >
@@ -239,7 +269,7 @@ export default function NotFound() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
                 </svg>
                 কল করুন
-              </a>
+              </Link>
             </div>
           </div>
 
