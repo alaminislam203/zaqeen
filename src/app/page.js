@@ -7,43 +7,20 @@ import NewArrivals from '@/components/NewArrivals';
 import Link from 'next/link';
 import Image from 'next/image';
 
-// Types
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl?: string;
-  createdAt?: any;
-}
-
-interface Testimonial {
-  id: string;
-  name: string;
-  comment: string;
-  rating: number;
-}
-
-interface SectionRefs {
-  values: React.RefObject<HTMLElement>;
-  philosophy: React.RefObject<HTMLElement>;
-  social: React.RefObject<HTMLElement>;
-  newsletter: React.RefObject<HTMLElement>;
-}
-
 export default function HomePage() {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
-  const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({});
+  const [visibleSections, setVisibleSections] = useState({});
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
   
-  const sectionRefs: SectionRefs = {
-    values: useRef<HTMLElement>(null),
-    philosophy: useRef<HTMLElement>(null),
-    social: useRef<HTMLElement>(null),
-    newsletter: useRef<HTMLElement>(null)
+  const sectionRefs = {
+    values: useRef(null),
+    philosophy: useRef(null),
+    social: useRef(null),
+    newsletter: useRef(null)
   };
 
   // Memoized brand values
@@ -95,7 +72,7 @@ export default function HomePage() {
 
   // Intersection Observer for scroll animations
   useEffect(() => {
-    const observers: IntersectionObserver[] = [];
+    const observers = [];
     
     Object.entries(sectionRefs).forEach(([key, ref]) => {
       if (ref.current) {
@@ -135,7 +112,7 @@ export default function HomePage() {
             const productsData = snapshot.docs.map(doc => ({ 
               id: doc.id, 
               ...doc.data() 
-            })) as Product[];
+            }));
             setFeaturedProducts(productsData);
             setLoading(false);
           }
@@ -177,7 +154,7 @@ export default function HomePage() {
             const testimonialsData = snapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
-            })) as Testimonial[];
+            }));
             setTestimonials(testimonialsData);
           }
         },
@@ -206,7 +183,7 @@ export default function HomePage() {
   }, [testimonials.length]);
 
   // Newsletter subscription handler
-  const handleSubscribe = async (e: React.FormEvent) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       alert('Please enter a valid email address');

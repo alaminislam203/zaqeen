@@ -23,7 +23,7 @@ export default function NotFound() {
     return () => clearInterval(timer);
   }, [router]);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/shop?search=${encodeURIComponent(searchQuery)}`);
@@ -71,7 +71,7 @@ export default function NotFound() {
   ];
 
   // Dynamic color classes
-  const getColorClasses = (color: string) => {
+  const getColorClasses = (color) => {
     const colors = {
       blue: {
         bg: 'bg-blue-100',
@@ -94,7 +94,7 @@ export default function NotFound() {
         groupHover: 'group-hover:text-white'
       }
     };
-    return colors[color as keyof typeof colors] || colors.blue;
+    return colors[color] || colors.blue;
   };
 
   return (
